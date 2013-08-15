@@ -1,0 +1,80 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>aws-dynamodb-session-tomcat</artifactId>
+    <packaging>jar</packaging>
+    <name>Amazon DynamoDB Session Manager for Tomcat</name>
+    <version>1.0.0</version>
+    <description>The Amazon DynamoDB Session Manager for Tomcat provides a custom session manager for Tomcat 7 that stores session data in Amazon DynamoDB, Amazon's fully managed NoSQL database service.</description>
+    <url>https://aws.amazon.com/java</url>
+
+    <scm>
+        <url>https://github.com/aws/aws-dynamodb-session-tomcat.git</url>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://aws.amazon.com/apache2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>amazonwebservices</id>
+            <organization>Amazon Web Services</organization>
+            <organizationUrl>https://aws.amazon.com</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <build>
+      <pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <source>1.5</source>
+              <target>1.5</target>
+              <encoding>UTF-8</encoding>
+            </configuration>
+          </plugin>
+        </plugins>
+      </pluginManagement>
+
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>sign-artifacts</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sign</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </build>
+
+    <dependencies>
+    	<dependency>
+    		<groupId>com.amazonaws</groupId>
+    		<artifactId>aws-java-sdk</artifactId>
+    		<version>1.5.4</version>
+    	</dependency>
+    	<dependency>
+    		<groupId>org.apache.tomcat</groupId>
+    		<artifactId>tomcat-catalina</artifactId>
+    		<version>7.0.42</version>
+    	</dependency>
+    </dependencies>
+</project>
