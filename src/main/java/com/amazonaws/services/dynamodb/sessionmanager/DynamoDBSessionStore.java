@@ -16,16 +16,17 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.catalina.Container;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
 import org.apache.catalina.session.StoreBase;
+import org.apache.catalina.util.CustomObjectInputStream;
 
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -113,9 +114,17 @@ public class DynamoDBSessionStore extends StoreBase {
 
         ByteBuffer byteBuffer = item.get(SessionTableAttributes.SESSION_DATA_ATTRIBUTE).getB();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(byteBuffer.array());
-        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 
-        Object readObject = objectInputStream.readObject();
+        Object readObject;
+        CustomObjectInputStream objectInputStream = null;
+        try {
+            Container webapp = getManager().getContainer();
+            objectInputStream = new CustomObjectInputStream(inputStream, webapp.getLoader().getClassLoader());
+
+            readObject = objectInputStream.readObject();
+        } finally {
+            try { objectInputStream.close(); } catch (Exception e) {}
+        }
 
         if (readObject instanceof Map<?, ?>) {
             Map<String, Object> sessionAttributeMap = (Map<String, Object>)readObject;
