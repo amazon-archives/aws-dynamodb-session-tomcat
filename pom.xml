@@ -167,6 +167,7 @@
 	      <configuration>
 		<serverId>sonatype-nexus-staging</serverId>
 		<nexusUrl>https://oss.sonatype.org</nexusUrl>
+                <releaseAfterClose>true</releaseAfterClose>
 	      </configuration>
 	    </plugin>
 	  </plugins>
