@@ -42,7 +42,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private static final String info = name + "/1.0";
 
     private String regionId = "us-east-1";
-    private String endpoint;
+    private String endpoint = null;
     private File credentialsFile;
     private String accessKey;
     private String secretKey;
@@ -51,16 +51,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private boolean createIfNotExist = true;
     private String tableName = DEFAULT_TABLE_NAME;
 
-    private final DynamoDBSessionStore dynamoSessionStore;
-
     private ExpiredSessionReaper expiredSessionReaper;
 
     private static Log logger;
 
 
     public DynamoDBSessionManager() {
-        dynamoSessionStore = new DynamoDBSessionStore();
-        setStore(dynamoSessionStore);
         setSaveOnRestart(true);
 
         // MaxInactiveInterval controls when sessions are removed from the store
@@ -140,6 +136,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         initDynamoTable(dynamo);
 
         // init session store
+        if (getStore() == null) setStore(new DynamoDBSessionStore());
+        DynamoDBSessionStore dynamoSessionStore = (DynamoDBSessionStore) getStore();
         dynamoSessionStore.setDynamoClient(dynamo);
         dynamoSessionStore.setSessionTableName(this.tableName);
 
