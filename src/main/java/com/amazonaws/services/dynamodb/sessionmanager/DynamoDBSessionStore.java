@@ -109,7 +109,9 @@ public class DynamoDBSessionStore extends StoreBase {
 
 
         Session session = getManager().createSession(id);
-        session.setCreationTime(Long.parseLong(item.get(SessionTableAttributes.CREATED_AT_ATTRIBUTE).getN()));
+        // This also sets lastAccessedTime = creationTime, so we need to set to SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE 
+        // instead of CREATED_AT_ATTRIBUTE, to prevent premature expiration of session on load
+        session.setCreationTime(Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN()));
 
 
         ByteBuffer byteBuffer = item.get(SessionTableAttributes.SESSION_DATA_ATTRIBUTE).getB();
