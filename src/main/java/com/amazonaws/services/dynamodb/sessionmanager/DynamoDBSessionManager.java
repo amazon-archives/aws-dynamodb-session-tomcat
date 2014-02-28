@@ -17,6 +17,7 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 import java.io.File;
 
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.Session;
 import org.apache.catalina.session.PersistentManagerBase;
 import org.apache.juli.logging.Log;
 
@@ -120,6 +121,27 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     //
     // Private Interface
     //
+
+    /**
+     * Return true, if the session id is loaded in memory and is valid
+     * otherwise false is returned
+     * This is called from DynamoDBSessionStore processExpires method, 
+     * because only a Manager can access the sessions map directly, 
+     * so as not to mark the session has having been accessed.
+     * 
+     * Note that we don't care if this is concurrently being swapped out, since a false positive will 
+     * just keep session around until next expiry check.
+     *
+     * @param id The session id for the session to be searched for
+     */
+    public boolean isLoadedAndValid( String id ){
+      if (id != null) {
+        Session session = sessions.get(id);
+        if (session != null && session.isValid()) return true;
+      }
+      return false;
+    }
+
 
     @Override
     protected void initInternal() throws LifecycleException {
