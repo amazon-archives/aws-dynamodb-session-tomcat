@@ -17,16 +17,14 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
-import com.amazonaws.services.dynamodbv2.model.Select;
+import com.amazonaws.services.dynamodbv2.model.*;
 
 /**
  * A background process to periodically scan (once every 12 hours, with an
@@ -39,6 +37,10 @@ public class ExpiredSessionReaper {
     private String tableName;
     private long expirationTimeInMillis;
     private ScheduledThreadPoolExecutor executor;
+    private static String[] ATTRIBUTES_TO_GET = {
+        SessionTableAttributes.SESSION_ID_KEY, 
+        SessionTableAttributes.SESSION_SEQ_KEY,
+        SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE};
 
 
     /**
@@ -98,9 +100,13 @@ public class ExpiredSessionReaper {
     private void reapExpiredSessions() {
         ScanRequest request = new ScanRequest(tableName);
         request.setSelect(Select.SPECIFIC_ATTRIBUTES);
-        request.withAttributesToGet(
-                SessionTableAttributes.SESSION_ID_KEY,
-                SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE);
+        request.withAttributesToGet(ATTRIBUTES_TO_GET);
+        
+        long expiredBefore = System.currentTimeMillis() + expirationTimeInMillis;
+        Condition condition = new Condition().withAttributeValueList(new AttributeValue()
+            .withN(Long.toString(expiredBefore)))
+            .withComparisonOperator(ComparisonOperator.LT);
+        request.addScanFilterEntry(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE, condition);
 
         ScanResult scanResult = null;
         do {
@@ -109,23 +115,13 @@ public class ExpiredSessionReaper {
             scanResult = dynamo.scan(request);
             List<Map<String,AttributeValue>> items = scanResult.getItems();
             for (Map<String, AttributeValue> item : items) {
-                if (isExpired(Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN()))) {
+                if (Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN())
+                	< System.currentTimeMillis() - expirationTimeInMillis) { // sanity check to minimize race condition
                     String sessionId = item.get(SessionTableAttributes.SESSION_ID_KEY).getS();
-                    DynamoUtils.deleteSession(dynamo, tableName, sessionId);
+                    int sequence = Integer.parseInt(item.get(SessionTableAttributes.SESSION_SEQ_KEY).getN());
+                    DynamoUtils.deleteItem(dynamo, tableName, sessionId, sequence);
                 }
             }
         } while (scanResult.getLastEvaluatedKey() != null);
-    }
-
-    /**
-     * Returns true if the specified session date is past the expiration point.
-     *
-     * @param sessionDateInMillis
-     *            The last access date, in milliseconds, for a session.
-     *
-     * @return True if the specified session date is past the expiration point.
-     */
-    private boolean isExpired(long sessionDateInMillis) {
-        return sessionDateInMillis > (System.currentTimeMillis() + expirationTimeInMillis);
     }
 }

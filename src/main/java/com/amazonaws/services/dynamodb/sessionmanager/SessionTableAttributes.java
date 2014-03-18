@@ -19,8 +19,9 @@ package com.amazonaws.services.dynamodb.sessionmanager;
  */
 public class SessionTableAttributes {
     public static final String SESSION_ID_KEY   = "sessionId";
-
+    public static final String SESSION_SEQ_KEY = "sequence";
     public static final String SESSION_DATA_ATTRIBUTE = "sessionData";
     public static final String LAST_UPDATED_AT_ATTRIBUTE = "lastUpdatedAt";
-    public static final String CREATED_AT_ATTRIBUTE = "createdAt";
+    public static final int NAME_LENGTHS = SESSION_ID_KEY.length() + SESSION_SEQ_KEY.length() 
+        + SESSION_DATA_ATTRIBUTE.length() + LAST_UPDATED_AT_ATTRIBUTE.length();
 }

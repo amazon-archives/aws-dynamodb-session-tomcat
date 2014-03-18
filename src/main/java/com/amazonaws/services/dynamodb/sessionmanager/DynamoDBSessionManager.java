@@ -117,6 +117,10 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.createIfNotExist = createIfNotExist;
     }
 
+    public void setConsistentRead(boolean setting) {
+      DynamoUtils.setConsistentRead(setting);
+    }
+
 
     //
     // Private Interface
@@ -145,7 +149,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     @Override
     protected void initInternal() throws LifecycleException {
+        super.initInternal();
         this.setDistributable(true);
+        DynamoUtils.setSessionIdLength(getSessionIdLength());
 
         // Grab the container's logger
         logger = getContainer().getLogger();

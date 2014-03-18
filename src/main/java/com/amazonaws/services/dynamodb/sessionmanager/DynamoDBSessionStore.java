@@ -48,7 +48,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     private Set<String> keys = Collections.synchronizedSet(new HashSet<String>());
 
-
+    
     @Override
     public String getInfo() {
         return info;
@@ -101,47 +101,12 @@ public class DynamoDBSessionStore extends StoreBase {
 
     @Override
     public Session load(String id) throws ClassNotFoundException, IOException {
-        Map<String, AttributeValue> item = DynamoUtils.loadItemBySessionId(dynamo, sessionTableName, id);
-        if (item == null || !item.containsKey(SessionTableAttributes.SESSION_ID_KEY) || !item.containsKey(SessionTableAttributes.SESSION_DATA_ATTRIBUTE)) {
-            DynamoDBSessionManager.warn("Unable to load session attributes for session " + id);
-            return null;
+        DynamoDBSessionManager manager = (DynamoDBSessionManager) getManager();
+        Session session = DynamoUtils.loadSession(dynamo, sessionTableName, id, manager);
+        if (session != null) {
+          keys.add(id);
+          manager.add(session);
         }
-
-
-        Session session = getManager().createSession(id);
-        // This also sets lastAccessedTime = creationTime, so we need to set to SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE 
-        // instead of CREATED_AT_ATTRIBUTE, to prevent premature expiration of session on load
-        session.setCreationTime(Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN()));
-
-
-        ByteBuffer byteBuffer = item.get(SessionTableAttributes.SESSION_DATA_ATTRIBUTE).getB();
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(byteBuffer.array());
-
-        Object readObject;
-        CustomObjectInputStream objectInputStream = null;
-        try {
-            Container webapp = getManager().getContainer();
-            objectInputStream = new CustomObjectInputStream(inputStream, webapp.getLoader().getClassLoader());
-
-            readObject = objectInputStream.readObject();
-        } finally {
-            try { objectInputStream.close(); } catch (Exception e) {}
-        }
-
-        if (readObject instanceof Map<?, ?>) {
-            Map<String, Object> sessionAttributeMap = (Map<String, Object>)readObject;
-
-            for (String s : sessionAttributeMap.keySet()) {
-                ((StandardSession)session).setAttribute(s, sessionAttributeMap.get(s));
-            }
-        } else {
-            throw new RuntimeException("Error: Unable to unmarshall session attributes from DynamoDB store");
-        }
-
-
-        keys.add(id);
-        manager.add(session);
-
         return session;
     }
 
@@ -203,5 +168,7 @@ public class DynamoDBSessionStore extends StoreBase {
         // We let the DynamoDB ExpiredSessionReaper clean up the DB eventually, 
         // but if an expired session is swapped in before that cleanup, it will be declared isInvalid upon load anyway.
       }
+      
     }
+
 }
