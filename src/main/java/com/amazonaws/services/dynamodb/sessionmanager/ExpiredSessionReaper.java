@@ -126,6 +126,6 @@ public class ExpiredSessionReaper {
      * @return True if the specified session date is past the expiration point.
      */
     private boolean isExpired(long sessionDateInMillis) {
-        return sessionDateInMillis > (System.currentTimeMillis() + expirationTimeInMillis);
+        return sessionDateInMillis < (System.currentTimeMillis() - expirationTimeInMillis);
     }
 }
