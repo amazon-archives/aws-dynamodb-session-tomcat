@@ -109,7 +109,9 @@ public class DynamoDBSessionStore extends StoreBase {
 
 
         Session session = getManager().createSession(id);
-        session.setCreationTime(Long.parseLong(item.get(SessionTableAttributes.CREATED_AT_ATTRIBUTE).getN()));
+        // This also sets lastAccessedTime = creationTime, so we need to set to SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE 
+        // instead of CREATED_AT_ATTRIBUTE, to prevent premature expiration of session on load
+        session.setCreationTime(Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN()));
 
 
         ByteBuffer byteBuffer = item.get(SessionTableAttributes.SESSION_DATA_ATTRIBUTE).getB();
@@ -153,5 +155,53 @@ public class DynamoDBSessionStore extends StoreBase {
     public void remove(String id) throws IOException {
         DynamoUtils.deleteSession(dynamo, sessionTableName, id);
         keys.remove(id);
+    }
+
+    /**
+     * Called by the Tomcat background reaper thread to check if Sessions
+     * saved in our store are subject to being expired. We override here
+     * because we only care about loaded sessions in this call, and let the
+     * DynamoDB ExpiredSessionReaper clean up the DB periodically.
+     * Note that if MinIdleSwap and MaxIdleSwap are set such that swapout 
+     * occurs well ahead of expiration, we never expire any in-memory sessions.
+     * However, if a swapped out session has actually expired, but has not yet
+     * been removed from the DB by ExpiredSessionReaper, then it will be 
+     * recognized as not valid upon load, so our overload has no detrimental effect.
+     * 
+     * Most importantly, this prevents constant reloading of sessions from DB for expiry check, 
+     * resulting in increased memory utilization, unnecessary DB activity, and occasional 
+     * loss of data, since a recently modified session (less than MaxIdleBackup ago)
+     * would NOT have been persisted, and we previously would have replaced it with an
+     * older object from the DB.
+     *
+     */
+    @Override
+    public void processExpires() {
+      String[] keys = null;
+
+      if(!getState().isAvailable()) {
+        return;
+      }
+
+      try {
+        keys = keys();
+      } catch (IOException e) {
+        manager.getContainer().getLogger().error("Error getting keys", e);
+        return;
+      }
+      if (manager.getContainer().getLogger().isDebugEnabled()) {
+        manager.getContainer().getLogger().debug(getStoreName()+ ": processExpires check number of " + keys.length + " sessions" );
+      }
+
+      for (int i = 0; i < keys.length; i++) {
+        String key = keys[i];
+        // We use a new method added to DynamoDBSessionManager to determine if session is loaded and valid
+        // because only the Manager can make this determination without calling findSession and isValid, which:
+        // a) Artificially mark the session as accessed, preventing appropriate swap processing.
+        // b) Attempting to load the session into memory if it is not already there, which we want to avoid.
+        ((DynamoDBSessionManager) manager).isLoadedAndValid(key); // this expires if in memory and not valid
+        // We let the DynamoDB ExpiredSessionReaper clean up the DB eventually, 
+        // but if an expired session is swapped in before that cleanup, it will be declared isInvalid upon load anyway.
+      }
     }
 }

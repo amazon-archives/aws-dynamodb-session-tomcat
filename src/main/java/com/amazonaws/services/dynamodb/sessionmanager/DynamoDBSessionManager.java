@@ -17,6 +17,7 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 import java.io.File;
 
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.Session;
 import org.apache.catalina.session.PersistentManagerBase;
 import org.apache.juli.logging.Log;
 
@@ -42,7 +43,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private static final String info = name + "/1.0";
 
     private String regionId = "us-east-1";
-    private String endpoint;
+    private String endpoint = null;
     private File credentialsFile;
     private String accessKey;
     private String secretKey;
@@ -51,16 +52,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private boolean createIfNotExist = true;
     private String tableName = DEFAULT_TABLE_NAME;
 
-    private final DynamoDBSessionStore dynamoSessionStore;
-
     private ExpiredSessionReaper expiredSessionReaper;
 
     private static Log logger;
 
 
     public DynamoDBSessionManager() {
-        dynamoSessionStore = new DynamoDBSessionStore();
-        setStore(dynamoSessionStore);
         setSaveOnRestart(true);
 
         // MaxInactiveInterval controls when sessions are removed from the store
@@ -125,6 +122,27 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     // Private Interface
     //
 
+    /**
+     * Return true, if the session id is loaded in memory and is valid
+     * otherwise false is returned
+     * This is called from DynamoDBSessionStore processExpires method, 
+     * because only a Manager can access the sessions map directly, 
+     * so as not to mark the session has having been accessed.
+     * 
+     * Note that we don't care if this is concurrently being swapped out, since a false positive will 
+     * just keep session around until next expiry check.
+     *
+     * @param id The session id for the session to be searched for
+     */
+    public boolean isLoadedAndValid( String id ){
+      if (id != null) {
+        Session session = sessions.get(id);
+        if (session != null && session.isValid()) return true;
+      }
+      return false;
+    }
+
+
     @Override
     protected void initInternal() throws LifecycleException {
         this.setDistributable(true);
@@ -140,6 +158,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         initDynamoTable(dynamo);
 
         // init session store
+        if (getStore() == null) setStore(new DynamoDBSessionStore());
+        DynamoDBSessionStore dynamoSessionStore = (DynamoDBSessionStore) getStore();
         dynamoSessionStore.setDynamoClient(dynamo);
         dynamoSessionStore.setSessionTableName(this.tableName);
 
