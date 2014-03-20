@@ -61,7 +61,8 @@ public class DynamoUtils {
     }
 
     public static void setSessionIdLength(int length) {
-	sessionIdLength = length;
+	// SessionId actually contains two characters representing hexadecimal "digits" for each 1 of configured length
+	sessionIdLength = length * 2;
     }
 
     public static void setMinSizeForCompression(int size) {
