@@ -102,7 +102,7 @@ public class ExpiredSessionReaper {
         request.setSelect(Select.SPECIFIC_ATTRIBUTES);
         request.withAttributesToGet(ATTRIBUTES_TO_GET);
         
-        long expiredBefore = System.currentTimeMillis() + expirationTimeInMillis;
+        long expiredBefore = System.currentTimeMillis() - expirationTimeInMillis;
         Condition condition = new Condition().withAttributeValueList(new AttributeValue()
             .withN(Long.toString(expiredBefore)))
             .withComparisonOperator(ComparisonOperator.LT);
@@ -115,8 +115,8 @@ public class ExpiredSessionReaper {
             scanResult = dynamo.scan(request);
             List<Map<String,AttributeValue>> items = scanResult.getItems();
             for (Map<String, AttributeValue> item : items) {
-                if (Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN())
-                	< System.currentTimeMillis() - expirationTimeInMillis) { // sanity check to minimize race condition
+                if (Long.parseLong(item.get(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE).getN()) < expiredBefore) { // sanity check to minimize race condition
+                    // delete the session
                     String sessionId = item.get(SessionTableAttributes.SESSION_ID_KEY).getS();
                     int sequence = Integer.parseInt(item.get(SessionTableAttributes.SESSION_SEQ_KEY).getN());
                     DynamoUtils.deleteItem(dynamo, tableName, sessionId, sequence);
