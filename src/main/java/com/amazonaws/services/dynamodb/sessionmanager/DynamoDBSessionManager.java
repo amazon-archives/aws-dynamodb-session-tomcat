@@ -14,13 +14,8 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager;
 
-import java.io.File;
-
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.session.PersistentManagerBase;
-import org.apache.juli.logging.Log;
-
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
@@ -29,6 +24,11 @@ import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import org.apache.catalina.LifecycleException;
+import org.apache.catalina.session.PersistentManagerBase;
+import org.apache.juli.logging.Log;
+
+import java.io.File;
 
 /**
  * Tomcat 7.0 persistent session manager implementation that uses Amazon
@@ -50,6 +50,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private long writeCapacityUnits = 5;
     private boolean createIfNotExist = true;
     private String tableName = DEFAULT_TABLE_NAME;
+    private String proxyHost;
+    private Integer proxyPort;
 
     private final DynamoDBSessionStore dynamoSessionStore;
 
@@ -120,8 +122,15 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.createIfNotExist = createIfNotExist;
     }
 
+    public void setProxyHost(String proxyHost) {
+        this.proxyHost = proxyHost;
+    }
 
-    //
+    public void setProxyPort(Integer proxyPort) {
+        this.proxyPort = proxyPort;
+    }
+
+//
     // Private Interface
     //
 
@@ -133,7 +142,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         logger = getContainer().getLogger();
 
         AWSCredentialsProvider credentialsProvider = initCredentials();
-        AmazonDynamoDBClient dynamo = new AmazonDynamoDBClient(credentialsProvider);
+        ClientConfiguration clientConfiguration = initClientConfiguration();
+
+        AmazonDynamoDBClient dynamo = new AmazonDynamoDBClient(credentialsProvider, clientConfiguration);
         if (this.regionId != null) dynamo.setRegion(RegionUtils.getRegion(this.regionId));
         if (this.endpoint != null) dynamo.setEndpoint(this.endpoint);
 
@@ -201,6 +212,24 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         }
         getContainer().getLogger().debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
+    }
+
+    private ClientConfiguration initClientConfiguration() {
+        ClientConfiguration clientConfiguration = new ClientConfiguration();
+
+        // Attempt to use an explicit proxy configuration
+        if (proxyHost != null || proxyPort != null) {
+            getContainer().getLogger().debug("Reading proxy settings from context.xml");
+            if (proxyHost == null || proxyPort == null) {
+                throw new AmazonClientException("Incomplete proxy settings specified in context.xml.");
+            }
+            getContainer().getLogger().debug("Using proxy host and port from context.xml");
+            clientConfiguration
+                    .withProxyHost(proxyHost)
+                    .withProxyPort(proxyPort);
+        }
+
+        return clientConfiguration;
     }
 
 
