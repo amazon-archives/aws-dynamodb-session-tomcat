@@ -89,18 +89,37 @@
 
                             <relocations>
                                 <relocation>
-                                    <pattern>com</pattern>
-                                    <shadedPattern>com.amazonaws.tomcatsessionmanager</shadedPattern>
+                                    <pattern>com.amazonaws</pattern>
+                                    <shadedPattern>com.amazonaws.tomcatsessionmanager.amazonaws</shadedPattern>
                                     <excludes>
                                         <!-- Don't shade this class, since we reference it by name in Tomcat configuration -->
                                         <exclude>com.amazonaws.services.dynamodb.sessionmanager.DynamoDBSessionManager</exclude>
                                     </excludes>
                                 </relocation>
                                 <relocation>
-                                    <pattern>org</pattern>
-                                    <shadedPattern>com.amazonaws.tomcatsessionmanager</shadedPattern>
+                                    <pattern>com.fasterxml</pattern>
+                                    <shadedPattern>com.amazonaws.tomcatsessionmanager.fasterxml</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.commons</pattern>
+                                    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.http</pattern>
+                                    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.http</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.joda</pattern>
+                                    <shadedPattern>com.amazonaws.tomcatsessionmanager.joda</shadedPattern>
                                 </relocation>
                             </relocations>
+
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                    <!-- Prevent .gitkeep from aws-java-sdk-s3 to be included -->
+                                    <resource>.gitkeep</resource>
+                                </transformer>
+                            </transformers>
 
                             <filters>
                                 <filter>
@@ -111,15 +130,18 @@
                                         <include>**</include>
                                     </includes>
                                 </filter>
-                                <filter>
-                                    <!-- Exclude all hidden files from all artifacts.
-                                     such as .gitkeep from aws-java-sdk-s3 -->
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>.*</exclude>
-                                    </excludes>
-                                </filter>
                             </filters>
+
+                            <artifactSet>
+                                <includes>
+                                    <include>com.amazonaws:*</include>
+                                    <include>commons-logging:*</include>
+                                    <include>org.apache.httpcomponents:*</include>
+                                    <include>commons-codec:*</include>
+                                    <include>com.fasterxml.jackson.core:*</include>
+                                    <include>joda-time:*</include>
+                                </includes>
+                            </artifactSet>
 
                         </configuration>
                     </execution>
