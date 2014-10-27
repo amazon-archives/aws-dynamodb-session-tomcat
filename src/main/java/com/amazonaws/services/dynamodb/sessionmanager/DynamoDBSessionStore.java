@@ -103,7 +103,7 @@ public class DynamoDBSessionStore extends StoreBase {
     public Session load(String id) throws ClassNotFoundException, IOException {
         Map<String, AttributeValue> item = DynamoUtils.loadItemBySessionId(dynamo, sessionTableName, id);
         if (item == null || !item.containsKey(SessionTableAttributes.SESSION_ID_KEY) || !item.containsKey(SessionTableAttributes.SESSION_DATA_ATTRIBUTE)) {
-            DynamoDBSessionManager.warn("Unable to load session attributes for session " + id);
+            DynamoDBSessionManager.debug("Unable to load session attributes for session " + id);
             return null;
         }
 
