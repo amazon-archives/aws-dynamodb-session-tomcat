@@ -135,14 +135,6 @@
                       <include>**</include>
                     </includes>
                   </filter>
-                   <filter>
-		    <!-- Pull in everything from commons-logging, so that we pick up all the adapter
-			 implementations that may not be statically referenced, but could be needed. -->
-                    <artifact>>com.fasterxml.jackson.core:*</artifact>
-                    <includes>
-                      <include>**</include>
-                    </includes>
-                  </filter>
 		</filters>
 
 	      </configuration>
