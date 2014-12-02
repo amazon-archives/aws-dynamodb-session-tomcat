@@ -109,6 +109,10 @@
 		    <pattern>com.fasterxml</pattern>
 		    <shadedPattern>com.amazonaws.tomcatsessionmanager.fasterxml</shadedPattern>
 		  </relocation>
+		  <relocation>
+		  	<pattern>org.joda.time</pattern>
+		  	<shadedPattern>com.amazonaws.tomcatsessionmanager.joda.time</shadedPattern>
+		  </relocation>
 		</relocations>
 		
 		<artifactSet>
@@ -118,6 +122,7 @@
 				    <include>org.apache.httpcomponents:*</include>
 				    <include>commons-codec:*</include>
 				    <include>com.fasterxml.jackson.core:*</include>
+				    <include>joda-time:*</include>
                   </includes>
 		</artifactSet>
 
@@ -126,6 +131,14 @@
 		    <!-- Pull in everything from commons-logging, so that we pick up all the adapter
 			 implementations that may not be statically referenced, but could be needed. -->
                     <artifact>commons-logging:commons-logging</artifact>
+                    <includes>
+                      <include>**</include>
+                    </includes>
+                  </filter>
+                   <filter>
+		    <!-- Pull in everything from commons-logging, so that we pick up all the adapter
+			 implementations that may not be statically referenced, but could be needed. -->
+                    <artifact>>com.fasterxml.jackson.core:*</artifact>
                     <includes>
                       <include>**</include>
                     </includes>
