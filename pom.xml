@@ -37,12 +37,13 @@
     	<dependency>
     		<groupId>com.amazonaws</groupId>
     		<artifactId>aws-java-sdk</artifactId>
-    		<version>1.5.4</version>
+    		<version>1.9.8</version>
     	</dependency>
     	<dependency>
     		<groupId>org.apache.tomcat</groupId>
     		<artifactId>tomcat-catalina</artifactId>
     		<version>7.0.42</version>
+		<scope>provided</scope>
     	</dependency>
     </dependencies>
 
@@ -113,7 +114,7 @@
 		
 		<artifactSet>
                   <includes>
-		    <include>com.amazonaws:aws-java-sdk</include>
+		    <include>com.amazonaws:aws-java-sdk*</include>
 		    <include>commons-logging:*</include>
 		    <include>org.apache.httpcomponents:*</include>
 		    <include>commons-codec:*</include>
