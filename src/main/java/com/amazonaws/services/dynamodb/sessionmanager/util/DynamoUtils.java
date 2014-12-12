@@ -180,7 +180,7 @@ public class DynamoUtils {
     }
 
     public static void addClientMarker(AmazonWebServiceRequest request) {
-        request.getRequestClientOptions().addClientMarker("DynamoSessionManager/1.0");
+        request.getRequestClientOptions().appendUserAgent("DynamoSessionManager/1.0");
     }
 
     private static Map<String, AttributeValue> newAttributeValueMap() {
