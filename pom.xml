@@ -105,10 +105,13 @@
 		    <pattern>org.apache.commons.codec</pattern>
 		    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons.codec</shadedPattern>
 		  </relocation>
-                  <!-- TODO: This needs to be updated to the new Jackson version when we update to a later SDK version -->
 		  <relocation>
-		    <pattern>org.codehaus</pattern>
-		    <shadedPattern>com.amazonaws.tomcatsessionmanager.codehaus</shadedPattern>
+		    <pattern>com.fasterxml</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.fasterxml</shadedPattern>
+		  </relocation>
+		  <relocation>
+		    <pattern>org.joda.time</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.joda.time</shadedPattern>
 		  </relocation>
 		</relocations>
 		
@@ -118,7 +121,8 @@
 		    <include>commons-logging:*</include>
 		    <include>org.apache.httpcomponents:*</include>
 		    <include>commons-codec:*</include>
-		    <include>org.codehaus.jackson:*</include>
+		    <include>com.fasterxml.jackson.core:*</include>
+		    <include>joda-time:*</include>
                   </includes>
 		</artifactSet>
 
@@ -128,6 +132,12 @@
 			 implementations that may not be statically referenced, but could be needed. -->
                     <artifact>commons-logging:commons-logging</artifact>
                     <includes>
+                      <include>**</include>
+                    </includes>
+                  </filter>
+                  <filter>
+                  	<artifact>com.fasterxml.jackson.core:*</artifact>
+                  	<includes>
                       <include>**</include>
                     </includes>
                   </filter>
