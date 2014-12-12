@@ -84,7 +84,7 @@ public class DynamoUtils {
     }
 
     public static void storeSession(AmazonDynamoDB dynamo, String tableName, Session session) throws IOException {
-        Map<String, Object> sessionAttributes = new HashMap<String, Object>();
+        Map<String, Object> sessionAttributes = new HashMap<>();
 
         HttpSession httpSession = session.getSession();
         Enumeration<String> attributeNames = httpSession.getAttributeNames();
@@ -123,8 +123,7 @@ public class DynamoUtils {
             addClientMarker(request);
 
             TableDescription table = dynamo.describeTable(request).getTable();
-            if (table == null) return false;
-            else return true;
+            return table != null;
         } catch (AmazonServiceException ase) {
             if (ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException")) return false;
             else throw ase;
@@ -145,7 +144,7 @@ public class DynamoUtils {
                 String tableStatus = tableDescription.getTableStatus();
                 if (tableStatus.equals(TableStatus.ACTIVE.toString())) return;
             } catch (AmazonServiceException ase) {
-                if (ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException") == false)
+                if (!ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException"))
                     throw ase;
             }
 
@@ -185,6 +184,6 @@ public class DynamoUtils {
     }
 
     private static Map<String, AttributeValue> newAttributeValueMap() {
-        return new HashMap<String, AttributeValue>();
+        return new HashMap<>();
     }
 }

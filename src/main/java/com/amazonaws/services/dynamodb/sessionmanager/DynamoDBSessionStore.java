@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.catalina.Container;
+import org.apache.catalina.Context;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
 import org.apache.catalina.session.StoreBase;
@@ -48,12 +49,6 @@ public class DynamoDBSessionStore extends StoreBase {
 
     private Set<String> keys = Collections.synchronizedSet(new HashSet<String>());
 
-
-    @Override
-    public String getInfo() {
-        return info;
-    }
-
     @Override
     public String getStoreName() {
         return name;
@@ -70,7 +65,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     @Override
     public void clear() throws IOException {
-        final Set<String> keysCopy = new HashSet<String>();
+        final Set<String> keysCopy = new HashSet<>();
         keysCopy.addAll(keys);
 
         new Thread("dynamodb-session-manager-clear") {
@@ -96,7 +91,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     @Override
     public String[] keys() throws IOException {
-        return keys.toArray(new String[0]);
+        return keys.toArray(new String[keys.size()]);
     }
 
     @Override
@@ -116,14 +111,9 @@ public class DynamoDBSessionStore extends StoreBase {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(byteBuffer.array());
 
         Object readObject;
-        CustomObjectInputStream objectInputStream = null;
-        try {
-            Container webapp = getManager().getContainer();
-            objectInputStream = new CustomObjectInputStream(inputStream, webapp.getLoader().getClassLoader());
 
+        try(CustomObjectInputStream objectInputStream = new CustomObjectInputStream(inputStream, getManager().getContext().getLoader().getClassLoader())) {
             readObject = objectInputStream.readObject();
-        } finally {
-            try { objectInputStream.close(); } catch (Exception e) {}
         }
 
         if (readObject instanceof Map<?, ?>) {
