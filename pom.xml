@@ -1,199 +1,189 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.amazonaws</groupId>
-	<artifactId>aws-dynamodb-session-tomcat</artifactId>
-	<packaging>jar</packaging>
-	<name>Amazon DynamoDB Session Manager for Tomcat</name>
-	<version>1.0.2</version>
-	<description>The Amazon DynamoDB Session Manager for Tomcat provides a
-		custom session manager for Tomcat 7 that stores session data in Amazon
-		DynamoDB, Amazon's fully managed NoSQL database service.</description>
-	<url>https://aws.amazon.com/java</url>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>aws-dynamodb-session-tomcat</artifactId>
+    <packaging>jar</packaging>
+    <name>Amazon DynamoDB Session Manager for Tomcat</name>
+    <version>1.0.2</version>
+    <description>The Amazon DynamoDB Session Manager for Tomcat provides a custom session manager for Tomcat 7 that stores session data in Amazon DynamoDB, Amazon's fully managed NoSQL database service.</description>
+    <url>https://aws.amazon.com/java</url>
 
-	<scm>
-		<url>https://github.com/aws/aws-dynamodb-session-tomcat.git</url>
-	</scm>
+    <scm>
+        <url>https://github.com/aws/aws-dynamodb-session-tomcat.git</url>
+    </scm>
 
-	<licenses>
-		<license>
-			<name>Apache License, Version 2.0</name>
-			<url>https://aws.amazon.com/apache2.0</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://aws.amazon.com/apache2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-	<developers>
-		<developer>
-			<id>amazonwebservices</id>
-			<organization>Amazon Web Services</organization>
-			<organizationUrl>https://aws.amazon.com</organizationUrl>
-			<roles>
-				<role>developer</role>
-			</roles>
-		</developer>
-	</developers>
+    <developers>
+        <developer>
+            <id>amazonwebservices</id>
+            <organization>Amazon Web Services</organization>
+            <organizationUrl>https://aws.amazon.com</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
 
-	<dependencies>
-		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk</artifactId>
-			<version>1.9.10</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.tomcat</groupId>
-			<artifactId>tomcat-catalina</artifactId>
-			<version>8.0.14</version>
-			<scope>provided</scope>
-		</dependency>
-	</dependencies>
+    <dependencies>
+    	<dependency>
+    		<groupId>com.amazonaws</groupId>
+    		<artifactId>aws-java-sdk</artifactId>
+    		<version>1.9.10</version>
+    	</dependency>
+    	<dependency>
+    		<groupId>org.apache.tomcat</groupId>
+    		<artifactId>tomcat-catalina</artifactId>
+    		<version>8.0.14</version>
+    		<scope>provided</scope>
+    	</dependency>
+    </dependencies>
 
+    <build>
+      <resources>
+	<resource>
+	  <directory>${basedir}</directory>
+	  <includes>
+	    <include>LICENSE.txt</include>
+	    <include>NOTICE.txt</include>
+	    <include>README.txt</include>
+	  </includes>
+	</resource>
+      </resources>
+
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+	  <version>2.3</version>
+          <configuration>
+            <source>1.5</source>
+            <target>1.5</target>
+            <encoding>UTF-8</encoding>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.2</version>
+          <executions>
+            <execution>
+	      <phase>package</phase>
+	      <goals>
+		<goal>shade</goal>
+	      </goals>
+	      <configuration>
+		<minimizeJar>true</minimizeJar>
+
+		<relocations>
+		  <relocation>
+		    <pattern>com.amazonaws</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.amazonaws</shadedPattern>
+		    <excludes>
+                      <!-- Don't shade this class, since we reference it by name in Tomcat configuration -->
+		      <exclude>com.amazonaws.services.dynamodb.sessionmanager.DynamoDBSessionManager</exclude>
+		    </excludes>
+		  </relocation>
+		  <relocation>
+		    <pattern>org.apache.http</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.http</shadedPattern>
+		  </relocation>
+		  <relocation>
+		    <pattern>org.apache.commons.logging</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons.logging</shadedPattern>
+		  </relocation>
+		  <relocation>
+		    <pattern>org.apache.commons.codec</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons.codec</shadedPattern>
+		  </relocation>
+		  <relocation>
+		    <pattern>com.fasterxml</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.fasterxml</shadedPattern>
+		  </relocation>
+		  <relocation>
+		    <pattern>org.joda.time</pattern>
+		    <shadedPattern>com.amazonaws.tomcatsessionmanager.joda.time</shadedPattern>
+		  </relocation>
+		</relocations>
+		
+		<artifactSet>
+                  <includes>
+		    <include>com.amazonaws:aws-java-sdk*</include>
+		    <include>commons-logging:*</include>
+		    <include>org.apache.httpcomponents:*</include>
+		    <include>commons-codec:*</include>
+		    <include>com.fasterxml.jackson.core:*</include>
+		    <include>joda-time:*</include>
+                  </includes>
+		</artifactSet>
+
+		<filters>
+                  <filter>
+		    <!-- Pull in everything from commons-logging, so that we pick up all the adapter
+			 implementations that may not be statically referenced, but could be needed. -->
+                    <artifact>commons-logging:commons-logging</artifact>
+                    <includes>
+                      <include>**</include>
+                    </includes>
+                  </filter>
+                  <filter>
+                  	<artifact>com.fasterxml.jackson.core:*</artifact>
+                  	<includes>
+                      <include>**</include>
+                    </includes>
+                  </filter>
+		</filters>
+
+	      </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </build>
+
+    <profiles>
+      <profile>
+	<id>publishing</id>
+	
 	<build>
-		<resources>
-			<resource>
-				<directory>${basedir}</directory>
-				<includes>
-					<include>LICENSE.txt</include>
-					<include>NOTICE.txt</include>
-					<include>README.txt</include>
-				</includes>
-			</resource>
-		</resources>
+	  <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-gpg-plugin</artifactId>
+              <executions>
+		<execution>
+		  <id>sign-artifacts</id>
+		  <phase>verify</phase>
+		  <goals>
+                    <goal>sign</goal>
+		  </goals>
+		</execution>
+              </executions>
+            </plugin>
 
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.3</version>
-				<configuration>
-					<source>1.5</source>
-					<target>1.5</target>
-					<encoding>UTF-8</encoding>
-				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.2</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<minimizeJar>true</minimizeJar>
-
-							<relocations>
-								<relocation>
-									<pattern>com.amazonaws</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.amazonaws
-									</shadedPattern>
-									<excludes>
-										<!-- Don't shade this class, since we reference it by name in Tomcat 
-											configuration -->
-										<exclude>com.amazonaws.services.dynamodb.sessionmanager.DynamoDBSessionManager
-										</exclude>
-									</excludes>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.http</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.apache.http
-									</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.commons.logging</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons.logging
-									</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.apache.commons.codec</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.apache.commons.codec
-									</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>com.fasterxml</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.fasterxml
-									</shadedPattern>
-								</relocation>
-								<relocation>
-									<pattern>org.joda.time</pattern>
-									<shadedPattern>com.amazonaws.tomcatsessionmanager.joda.time
-									</shadedPattern>
-								</relocation>
-							</relocations>
-
-							<artifactSet>
-								<includes>
-									<include>com.amazonaws:aws-java-sdk*</include>
-									<include>commons-logging:*</include>
-									<include>org.apache.httpcomponents:*</include>
-									<include>commons-codec:*</include>
-									<include>com.fasterxml.jackson.core:*</include>
-									<include>joda-time:*</include>
-								</includes>
-							</artifactSet>
-
-							<filters>
-								<filter>
-									<!-- Pull in everything from commons-logging, so that we pick up 
-										all the adapter implementations that may not be statically referenced, but 
-										could be needed. -->
-									<artifact>commons-logging:commons-logging</artifact>
-									<includes>
-										<include>**</include>
-									</includes>
-								</filter>
-								<filter>
-									<artifact>com.fasterxml.jackson.core:*</artifact>
-									<includes>
-										<include>**</include>
-									</includes>
-								</filter>
-							</filters>
-
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
+	    <plugin>
+	      <groupId>org.sonatype.plugins</groupId>
+	      <artifactId>nexus-staging-maven-plugin</artifactId>
+	      <version>1.5.1</version>
+	      <extensions>true</extensions>
+	      <configuration>
+		<serverId>sonatype-nexus-staging</serverId>
+		<nexusUrl>https://oss.sonatype.org</nexusUrl>
+                <releaseAfterClose>true</releaseAfterClose>
+	      </configuration>
+	    </plugin>
+	  </plugins>
 	</build>
-
-	<profiles>
-		<profile>
-			<id>publishing</id>
-
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-
-					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<version>1.5.1</version>
-						<extensions>true</extensions>
-						<configuration>
-							<serverId>sonatype-nexus-staging</serverId>
-							<nexusUrl>https://oss.sonatype.org</nexusUrl>
-							<releaseAfterClose>true</releaseAfterClose>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
+      </profile>
+    </profiles>
 
 </project>
