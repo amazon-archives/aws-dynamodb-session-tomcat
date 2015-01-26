@@ -39,7 +39,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/1.0";
+    private static final String info = name + "/2.0";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -52,8 +52,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private String tableName = DEFAULT_TABLE_NAME;
 
     private final DynamoDBSessionStore dynamoSessionStore;
-
-    private ExpiredSessionReaper expiredSessionReaper;
 
     private static Log logger;
 
@@ -143,13 +141,11 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         dynamoSessionStore.setDynamoClient(dynamo);
         dynamoSessionStore.setSessionTableName(this.tableName);
 
-        expiredSessionReaper = new ExpiredSessionReaper(dynamo, tableName, this.maxInactiveInterval);
     }
 
     @Override
     protected synchronized void stopInternal() throws LifecycleException {
         super.stopInternal();
-        if (expiredSessionReaper != null) expiredSessionReaper.shutdown();
     }
 
     private void initDynamoTable(AmazonDynamoDBClient dynamo) {
