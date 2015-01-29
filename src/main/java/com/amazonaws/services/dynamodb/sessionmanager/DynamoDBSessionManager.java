@@ -143,7 +143,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         dynamoSessionStore.setDynamoClient(dynamo);
         dynamoSessionStore.setSessionTableName(this.tableName);
 
-        expiredSessionReaper = new ExpiredSessionReaper(dynamo, tableName, this.maxInactiveInterval);
+        expiredSessionReaper = new ExpiredSessionReaper(dynamo, tableName, (this.maxInactiveInterval * 1000));
     }
 
     @Override
