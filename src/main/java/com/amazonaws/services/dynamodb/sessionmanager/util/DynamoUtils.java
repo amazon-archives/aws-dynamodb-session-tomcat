@@ -94,27 +94,29 @@ public class DynamoUtils {
             sessionAttributes.put(attributeName, attributeValue);
         }
 
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
-        objectOutputStream.writeObject(sessionAttributes);
-        objectOutputStream.close();
+		if(sessionAttributes.size() > 0) {
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+			objectOutputStream.writeObject(sessionAttributes);
+			objectOutputStream.close();
 
-        byte[] byteArray = byteArrayOutputStream.toByteArray();
+			byte[] byteArray = byteArrayOutputStream.toByteArray();
 
-        Map<String, AttributeValue> attributes = newAttributeValueMap();
-        attributes.put(SessionTableAttributes.SESSION_ID_KEY, new AttributeValue(session.getId()));
-        ByteBuffer b = ByteBuffer.wrap(byteArray);
-        attributes.put(SessionTableAttributes.SESSION_DATA_ATTRIBUTE, new AttributeValue().withB(b));
-        attributes.put(SessionTableAttributes.CREATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(session.getCreationTime())));
-        attributes.put(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(System.currentTimeMillis())));
+			Map<String, AttributeValue> attributes = newAttributeValueMap();
+			attributes.put(SessionTableAttributes.SESSION_ID_KEY, new AttributeValue(session.getId()));
+			ByteBuffer b = ByteBuffer.wrap(byteArray);
+			attributes.put(SessionTableAttributes.SESSION_DATA_ATTRIBUTE, new AttributeValue().withB(b));
+			attributes.put(SessionTableAttributes.CREATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(session.getCreationTime())));
+			attributes.put(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(System.currentTimeMillis())));
 
-        try {
-            PutItemRequest request = new PutItemRequest(tableName, attributes);
-            addClientMarker(request);
-            dynamo.putItem(request);
-        } catch (Exception e) {
-            DynamoDBSessionManager.error("Unable to save session " + session.getId(), e);
-        }
+			try {
+				PutItemRequest request = new PutItemRequest(tableName, attributes);
+				addClientMarker(request);
+				dynamo.putItem(request);
+			} catch (Exception e) {
+				DynamoDBSessionManager.error("Unable to save session " + session.getId(), e);
+			}
+		}
     }
 
     public static boolean doesTableExist(AmazonDynamoDBClient dynamo, String tableName) {
