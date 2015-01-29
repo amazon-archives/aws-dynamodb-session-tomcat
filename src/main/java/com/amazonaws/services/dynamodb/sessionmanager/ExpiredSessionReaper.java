@@ -73,6 +73,7 @@ public class ExpiredSessionReaper {
      * ThreadFactory for creating the daemon reaper thread.
      */
     private final class ExpiredSessionReaperThreadFactory implements ThreadFactory {
+        @Override
         public Thread newThread(Runnable runnable) {
             Thread thread = new Thread(runnable);
             thread.setDaemon(true);
@@ -85,6 +86,7 @@ public class ExpiredSessionReaper {
      * Runnable that is invoked periodically to scan for expired sessions.
      */
     private class ExpiredSessionReaperRunnable implements Runnable {
+        @Override
         public void run() {
             reapExpiredSessions();
         }

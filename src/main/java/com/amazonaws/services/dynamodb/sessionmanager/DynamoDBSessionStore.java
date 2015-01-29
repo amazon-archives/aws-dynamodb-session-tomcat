@@ -67,7 +67,7 @@ public class DynamoDBSessionStore extends StoreBase {
         this.sessionTableName = tableName;
     }
 
-
+    @Override
     public void clear() throws IOException {
         final Set<String> keysCopy = new HashSet<String>();
         keysCopy.addAll(keys);
@@ -84,6 +84,7 @@ public class DynamoDBSessionStore extends StoreBase {
         keys.clear();
     }
 
+    @Override
     public int getSize() throws IOException {
         // The item count from describeTable is updated every ~6 hours
         TableDescription table = dynamo.describeTable(new DescribeTableRequest().withTableName(sessionTableName)).getTable();
@@ -92,10 +93,12 @@ public class DynamoDBSessionStore extends StoreBase {
         return (int)itemCount;
     }
 
+    @Override
     public String[] keys() throws IOException {
         return keys.toArray(new String[0]);
     }
 
+    @Override
     public Session load(String id) throws ClassNotFoundException, IOException {
         Map<String, AttributeValue> item = DynamoUtils.loadItemBySessionId(dynamo, sessionTableName, id);
         if (item == null || !item.containsKey(SessionTableAttributes.SESSION_ID_KEY) || !item.containsKey(SessionTableAttributes.SESSION_DATA_ATTRIBUTE)) {
@@ -123,6 +126,7 @@ public class DynamoDBSessionStore extends StoreBase {
         }
 
         if (readObject instanceof Map<?, ?>) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> sessionAttributeMap = (Map<String, Object>)readObject;
 
             for (String s : sessionAttributeMap.keySet()) {
@@ -139,11 +143,13 @@ public class DynamoDBSessionStore extends StoreBase {
         return session;
     }
 
+    @Override
     public void save(Session session) throws IOException {
         DynamoUtils.storeSession(dynamo, sessionTableName, session);
         keys.add(session.getId());
     }
 
+    @Override
     public void remove(String id) throws IOException {
         DynamoUtils.deleteSession(dynamo, sessionTableName, id);
         keys.remove(id);
