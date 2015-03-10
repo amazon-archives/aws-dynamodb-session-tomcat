@@ -40,7 +40,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/1.0";
+    @SuppressWarnings("unused")
+	private static final String info = name + "/1.0";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -71,11 +72,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
         // MaxIdleBackup controls when sessions are persisted to the store
         setMaxIdleBackup(30); // 30 seconds
-    }
-
-    @Override
-    public String getInfo() {
-        return info;
     }
 
     @Override
@@ -140,7 +136,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.setDistributable(true);
 
         // Grab the container's logger
-        logger = getContainer().getLogger();
+        logger = getContext().getLogger();
 
         AWSCredentialsProvider credentialsProvider = initCredentials();
         ClientConfiguration clientConfiguration = initClientConfiguration();
@@ -181,20 +177,20 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private AWSCredentialsProvider initCredentials() {
         // Attempt to use any explicitly specified credentials first
         if (accessKey != null || secretKey != null) {
-            getContainer().getLogger().debug("Reading security credentials from context.xml");
+            getContext().getLogger().debug("Reading security credentials from context.xml");
             if (accessKey == null || secretKey == null) {
                 throw new AmazonClientException("Incomplete AWS security credentials specified in context.xml.");
             }
-            getContainer().getLogger().debug("Using AWS access key ID and secret key from context.xml");
+            getContext().getLogger().debug("Using AWS access key ID and secret key from context.xml");
             return new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
         }
 
         // Use any explicitly specified credentials properties file next
         if (credentialsFile != null) {
             try {
-                getContainer().getLogger().debug("Reading security credentials from properties file: " + credentialsFile);
+                getContext().getLogger().debug("Reading security credentials from properties file: " + credentialsFile);
                 PropertiesCredentials credentials = new PropertiesCredentials(credentialsFile);
-                getContainer().getLogger().debug("Using AWS credentials from file: " + credentialsFile);
+                getContext().getLogger().debug("Using AWS credentials from file: " + credentialsFile);
                 return new StaticCredentialsProvider(credentials);
             } catch (Exception e) {
                 throw new AmazonClientException(
@@ -205,13 +201,13 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         // Fall back to the default credentials chain provider if credentials weren't explicitly set
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
-            getContainer().getLogger().debug("Loading security credentials from default credentials provider chain.");
+            getContext().getLogger().debug("Loading security credentials from default credentials provider chain.");
             throw new AmazonClientException(
                     "Unable find AWS security credentials.  " +
                     "Searched JVM system properties, OS env vars, and EC2 instance roles.  " +
                     "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
         }
-        getContainer().getLogger().debug("Using default AWS credentials provider chain to load credentials");
+        getContext().getLogger().debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
     }
 
