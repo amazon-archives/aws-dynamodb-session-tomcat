@@ -18,7 +18,7 @@ For more information on using the session manager, see the
 Developer Information
 ---------------------
 
-You can check out the source for the session manager here, and build it with Maven (mvn package).  
+You can check out the source for the session manager here, and build it with Maven.  
 The official release builds use JarJar
 to package all the dependencies in the session manager jar *(to provide an easy, one-jar install)* and rename classes 
 *(to avoid exposing the SDK code to all web apps running in Tomcat)*.  To run with a development build, 

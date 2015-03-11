@@ -53,11 +53,13 @@ import com.amazonaws.services.dynamodbv2.model.TableStatus;
  */
 public class DynamoUtils {
 
-    public static Map<String, AttributeValue> loadItemBySessionId(AmazonDynamoDB dynamo, String tableName, String sessionId) {
+    public static Map<String, AttributeValue> loadItemBySessionId(AmazonDynamoDB dynamo,
+                                                                  String tableName,
+                                                                  String sessionId) {
         Map<String, AttributeValue> map = newAttributeValueMap();
         map.put(SessionTableAttributes.SESSION_ID_KEY, new AttributeValue(sessionId));
         GetItemRequest request = new GetItemRequest(tableName, map);
-        addClientMarker(request);
+        appendUserAgent(request);
 
         try {
             GetItemResult result = dynamo.getItem(request);
@@ -74,7 +76,7 @@ public class DynamoUtils {
         key.put(SessionTableAttributes.SESSION_ID_KEY, new AttributeValue(sessionId));
 
         DeleteItemRequest request = new DeleteItemRequest(tableName, key);
-        addClientMarker(request);
+        appendUserAgent(request);
 
         try {
             dynamo.deleteItem(request);
@@ -84,7 +86,7 @@ public class DynamoUtils {
     }
 
     public static void storeSession(AmazonDynamoDB dynamo, String tableName, Session session) throws IOException {
-        Map<String, Object> sessionAttributes = new HashMap<>();
+        Map<String, Object> sessionAttributes = new HashMap<String, Object>();
 
         HttpSession httpSession = session.getSession();
         Enumeration<String> attributeNames = httpSession.getAttributeNames();
@@ -105,12 +107,14 @@ public class DynamoUtils {
         attributes.put(SessionTableAttributes.SESSION_ID_KEY, new AttributeValue(session.getId()));
         ByteBuffer b = ByteBuffer.wrap(byteArray);
         attributes.put(SessionTableAttributes.SESSION_DATA_ATTRIBUTE, new AttributeValue().withB(b));
-        attributes.put(SessionTableAttributes.CREATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(session.getCreationTime())));
-        attributes.put(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE, new AttributeValue().withN(Long.toString(System.currentTimeMillis())));
+        attributes.put(SessionTableAttributes.CREATED_AT_ATTRIBUTE,
+                new AttributeValue().withN(Long.toString(session.getCreationTime())));
+        attributes.put(SessionTableAttributes.LAST_UPDATED_AT_ATTRIBUTE,
+                new AttributeValue().withN(Long.toString(System.currentTimeMillis())));
 
         try {
             PutItemRequest request = new PutItemRequest(tableName, attributes);
-            addClientMarker(request);
+            appendUserAgent(request);
             dynamo.putItem(request);
         } catch (Exception e) {
             DynamoDBSessionManager.error("Unable to save session " + session.getId(), e);
@@ -120,13 +124,16 @@ public class DynamoUtils {
     public static boolean doesTableExist(AmazonDynamoDBClient dynamo, String tableName) {
         try {
             DescribeTableRequest request = new DescribeTableRequest().withTableName(tableName);
-            addClientMarker(request);
+            appendUserAgent(request);
 
             TableDescription table = dynamo.describeTable(request).getTable();
             return table != null;
         } catch (AmazonServiceException ase) {
-            if (ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException")) return false;
-            else throw ase;
+            if (ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException")) {
+                return false;
+            } else {
+                throw ase;
+            }
         }
     }
 
@@ -136,33 +143,41 @@ public class DynamoUtils {
         while (System.currentTimeMillis() < endTime) {
             try {
                 DescribeTableRequest request = new DescribeTableRequest().withTableName(tableName);
-                addClientMarker(request);
+                appendUserAgent(request);
 
                 TableDescription tableDescription = dynamo.describeTable(request).getTable();
-                if (tableDescription == null) continue;
+                if (tableDescription == null) {
+                    continue;
+                }
 
                 String tableStatus = tableDescription.getTableStatus();
-                if (tableStatus.equals(TableStatus.ACTIVE.toString())) return;
+                if (tableStatus.equals(TableStatus.ACTIVE.toString())) {
+                    return;
+                }
             } catch (AmazonServiceException ase) {
-                if (!ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException"))
+                if (!ase.getErrorCode().equalsIgnoreCase("ResourceNotFoundException")) {
                     throw ase;
+                }
             }
 
             try {
                 Thread.sleep(1000 * 5);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new AmazonClientException(
-                        "Interrupted while waiting for table '" + tableName + "' to become active.", e);
+                throw new AmazonClientException("Interrupted while waiting for table '" + tableName
+                        + "' to become active.", e);
             }
         }
 
         throw new AmazonClientException("Table '" + tableName + "' never became active");
     }
 
-    public static void createSessionTable(AmazonDynamoDBClient dynamo, String tableName, long readCapacityUnits, long writeCapacityUnits) {
+    public static void createSessionTable(AmazonDynamoDBClient dynamo,
+                                          String tableName,
+                                          long readCapacityUnits,
+                                          long writeCapacityUnits) {
         CreateTableRequest request = new CreateTableRequest().withTableName(tableName);
-        addClientMarker(request);
+        appendUserAgent(request);
 
         request.withKeySchema(new KeySchemaElement()
             .withAttributeName(SessionTableAttributes.SESSION_ID_KEY)
@@ -179,11 +194,11 @@ public class DynamoUtils {
         dynamo.createTable(request);
     }
 
-    public static void addClientMarker(AmazonWebServiceRequest request) {
+    public static void appendUserAgent(AmazonWebServiceRequest request) {
         request.getRequestClientOptions().appendUserAgent("DynamoSessionManager/1.0");
     }
 
     private static Map<String, AttributeValue> newAttributeValueMap() {
-        return new HashMap<>();
+        return new HashMap<String, AttributeValue>();
     }
 }
