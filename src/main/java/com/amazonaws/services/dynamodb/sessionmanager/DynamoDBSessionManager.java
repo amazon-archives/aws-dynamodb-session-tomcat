@@ -16,30 +16,42 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import java.io.File;
 
+import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.session.PersistentManagerBase;
 import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.DefaultTomcatSessionConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyDynamoDBSessionItemConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.TomcatSessionConverterChain;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.util.Tables;
+import com.amazonaws.util.StringUtils;
 
 /**
- * Tomcat 7.0 persistent session manager implementation that uses Amazon
- * DynamoDB to store HTTP session data.
+ * Tomcat persistent session manager implementation that uses Amazon DynamoDB to store HTTP session
+ * data.
  */
 public class DynamoDBSessionManager extends PersistentManagerBase {
 
-    private static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
+    public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
+    private static final String USER_AGENT = "DynamoSessionManager/1.1";
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0";
+    private static final String info = name + "/1.1";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -50,15 +62,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private long writeCapacityUnits = 5;
     private boolean createIfNotExist = true;
     private String tableName = DEFAULT_TABLE_NAME;
+    private String proxyHost;
+    private Integer proxyPort;
 
-    private final DynamoDBSessionStore dynamoSessionStore;
-
-    private static Log logger;
-
+    private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
 
     public DynamoDBSessionManager() {
-        dynamoSessionStore = new DynamoDBSessionStore();
-        setStore(dynamoSessionStore);
         setSaveOnRestart(true);
 
         // MaxInactiveInterval controls when sessions are removed from the store
@@ -118,6 +127,13 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.createIfNotExist = createIfNotExist;
     }
 
+    public void setProxyHost(String proxyHost) {
+        this.proxyHost = proxyHost;
+    }
+
+    public void setProxyPort(Integer proxyPort) {
+        this.proxyPort = proxyPort;
+    }
 
     //
     // Private Interface
@@ -127,78 +143,146 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     protected void initInternal() throws LifecycleException {
         this.setDistributable(true);
 
-        // Grab the container's logger
-        logger = getContainer().getLogger();
+        AmazonDynamoDBClient dynamoClient = createDynamoClient();
+        initDynamoTable(dynamoClient);
+        DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
+        setStore(new DynamoDBSessionStore(sessionStorage));
+        new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
+    }
 
+    private AmazonDynamoDBClient createDynamoClient() {
         AWSCredentialsProvider credentialsProvider = initCredentials();
-        AmazonDynamoDBClient dynamo = new AmazonDynamoDBClient(credentialsProvider);
-        if (this.regionId != null) dynamo.setRegion(RegionUtils.getRegion(this.regionId));
-        if (this.endpoint != null) dynamo.setEndpoint(this.endpoint);
-
-        initDynamoTable(dynamo);
-
-        // init session store
-        dynamoSessionStore.setDynamoClient(dynamo);
-        dynamoSessionStore.setSessionTableName(this.tableName);
-
-    }
-
-    @Override
-    protected synchronized void stopInternal() throws LifecycleException {
-        super.stopInternal();
-    }
-
-    private void initDynamoTable(AmazonDynamoDBClient dynamo) {
-        boolean tableExists = DynamoUtils.doesTableExist(dynamo, this.tableName);
-
-        if (!tableExists && !createIfNotExist) {
-            throw new AmazonClientException("Session table '" + tableName + "' does not exist, "
-                    + "and automatic table creation has been disabled in context.xml");
+        ClientConfiguration clientConfiguration = initClientConfiguration();
+        AmazonDynamoDBClient dynamoClient = new AmazonDynamoDBClient(credentialsProvider, clientConfiguration);
+        if (this.regionId != null) {
+            dynamoClient.setRegion(RegionUtils.getRegion(this.regionId));
         }
-
-        if (!tableExists) DynamoUtils.createSessionTable(dynamo, this.tableName,
-                this.readCapacityUnits, this.writeCapacityUnits);
-
-        DynamoUtils.waitForTableToBecomeActive(dynamo, this.tableName);
+        if (this.endpoint != null) {
+            dynamoClient.setEndpoint(this.endpoint);
+        }
+        return dynamoClient;
     }
 
     private AWSCredentialsProvider initCredentials() {
-        // Attempt to use any explicitly specified credentials first
-        if (accessKey != null || secretKey != null) {
-            getContainer().getLogger().debug("Reading security credentials from context.xml");
-            if (accessKey == null || secretKey == null) {
+        // Attempt to use any credentials specified in context.xml first
+        if (credentialsExistInContextConfig()) {
+            // Fail fast if credentials aren't valid as user has likely made a configuration mistake
+            if (credentialsInContextConfigAreValid()) {
                 throw new AmazonClientException("Incomplete AWS security credentials specified in context.xml.");
             }
-            getContainer().getLogger().debug("Using AWS access key ID and secret key from context.xml");
+            debug("Using AWS access key ID and secret key from context.xml");
             return new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
         }
 
         // Use any explicitly specified credentials properties file next
         if (credentialsFile != null) {
             try {
-                getContainer().getLogger().debug("Reading security credentials from properties file: " + credentialsFile);
+                debug("Reading security credentials from properties file: " + credentialsFile);
                 PropertiesCredentials credentials = new PropertiesCredentials(credentialsFile);
-                getContainer().getLogger().debug("Using AWS credentials from file: " + credentialsFile);
+                debug("Using AWS credentials from file: " + credentialsFile);
                 return new StaticCredentialsProvider(credentials);
             } catch (Exception e) {
                 throw new AmazonClientException(
-                        "Unable to read AWS security credentials from file specified in context.xml: " + credentialsFile, e);
+                        "Unable to read AWS security credentials from file specified in context.xml: "
+                                + credentialsFile, e);
             }
         }
 
         // Fall back to the default credentials chain provider if credentials weren't explicitly set
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
-            getContainer().getLogger().debug("Loading security credentials from default credentials provider chain.");
+            debug("Loading security credentials from default credentials provider chain.");
             throw new AmazonClientException(
-                    "Unable find AWS security credentials.  " +
-                    "Searched JVM system properties, OS env vars, and EC2 instance roles.  " +
-                    "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
+                    "Unable find AWS security credentials.  "
+                            + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
+                            + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
         }
-        getContainer().getLogger().debug("Using default AWS credentials provider chain to load credentials");
+        debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
     }
 
+    /**
+     * @return True if the user has set their AWS credentials either partially or completely in
+     *         context.xml. False otherwise
+     */
+    private boolean credentialsExistInContextConfig() {
+        return accessKey != null || secretKey != null;
+    }
+
+    /**
+     * @return True if both the access key and secret key were set in context.xml config. False
+     *         otherwise
+     */
+    private boolean credentialsInContextConfigAreValid() {
+        return StringUtils.isNullOrEmpty(accessKey) || StringUtils.isNullOrEmpty(secretKey);
+    }
+
+    private ClientConfiguration initClientConfiguration() {
+        ClientConfiguration clientConfiguration = new ClientConfiguration();
+        clientConfiguration.setUserAgent(USER_AGENT);
+
+        // Attempt to use an explicit proxy configuration
+        if (proxyHost != null || proxyPort != null) {
+            debug("Reading proxy settings from context.xml");
+            if (proxyHost == null || proxyPort == null) {
+                throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
+                        + " Both proxy hot and proxy port needs to be specified");
+            }
+            debug("Using proxy host and port from context.xml");
+            clientConfiguration.withProxyHost(proxyHost).withProxyPort(proxyPort);
+        }
+
+        return clientConfiguration;
+    }
+
+    private void initDynamoTable(AmazonDynamoDBClient dynamo) {
+        boolean tableExists = Tables.doesTableExist(dynamo, this.tableName);
+
+        if (!tableExists && !createIfNotExist) {
+            throw new AmazonClientException("Session table '" + tableName + "' does not exist, "
+                    + "and automatic table creation has been disabled in context.xml");
+        }
+
+        if (!tableExists) {
+            DynamoUtils.createSessionTable(dynamo, this.tableName, this.readCapacityUnits, this.writeCapacityUnits);
+        }
+
+        Tables.waitForTableToBecomeActive(dynamo, this.tableName);
+    }
+
+    private DynamoSessionStorage createSessionStorage(AmazonDynamoDBClient dynamoClient) {
+        DynamoDBMapper dynamoMapper = DynamoUtils.createDynamoMapper(dynamoClient, tableName);
+        return new DynamoSessionStorage(dynamoMapper, getSessionConverter());
+    }
+
+    private SessionConverter getSessionConverter() {
+        ClassLoader classLoader = getAssociatedContext().getLoader().getClassLoader();
+        LegacyTomcatSessionConverter legacyConverter = new LegacyTomcatSessionConverter(this, classLoader,
+                maxInactiveInterval);
+        DefaultTomcatSessionConverter defaultConverter = new DefaultTomcatSessionConverter(this, classLoader);
+        // Converter compatible with the legacy schema but can understand new schema
+        return new SessionConverter(TomcatSessionConverterChain.wrap(legacyConverter, defaultConverter),
+                new LegacyDynamoDBSessionItemConverter());
+    }
+
+    /**
+     * To be compatible with Tomcat7 we have to call the getContainer method rather than getContext.
+     * The cast is safe as it only makes sense to use a session manager within the context of a
+     * webapp, the Tomcat 8 version of getContainer just delegates to getContext. When Tomcat7 is no
+     * longer supported this can be changed to getContext
+     * 
+     * @return The context this manager is associated with
+     */
+    // TODO Inline this method with getManager().getContext() when Tomcat7 is no longer supported
+    private Context getAssociatedContext() {
+        try {
+            return (Context) getContainer();
+        } catch (ClassCastException e) {
+            logger.fatal("Unable to cast " + getClass().getName() + " to a Context."
+                    + " DynamoDB SessionManager can only be used with a Context");
+            throw new IllegalStateException(e);
+        }
+    }
 
     //
     // Logger Utility Functions
