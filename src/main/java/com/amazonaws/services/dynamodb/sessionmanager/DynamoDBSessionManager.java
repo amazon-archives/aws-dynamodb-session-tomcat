@@ -30,8 +30,8 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.DefaultDynamoSessionItemConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.DefaultTomcatSessionConverter;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyDynamoDBSessionItemConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.TomcatSessionConverterChain;
@@ -49,9 +49,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
-    private static final String USER_AGENT = "DynamoSessionManager/1.1";
+    private static final String USER_AGENT = "DynamoSessionManager/2.0";
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/1.1";
+    private static final String info = name + "/2.0";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -86,10 +86,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     public String getName() {
         return name;
     }
-
-    //
-    // Context.xml Configuration Members
-    //
 
     public void setRegionId(String regionId) {
         this.regionId = regionId;
@@ -135,10 +131,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.proxyPort = proxyPort;
     }
 
-    //
-    // Private Interface
-    //
-
     @Override
     protected void initInternal() throws LifecycleException {
         this.setDistributable(true);
@@ -170,16 +162,16 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
             if (credentialsInContextConfigAreValid()) {
                 throw new AmazonClientException("Incomplete AWS security credentials specified in context.xml.");
             }
-            debug("Using AWS access key ID and secret key from context.xml");
+            logger.debug("Using AWS access key ID and secret key from context.xml");
             return new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
         }
 
         // Use any explicitly specified credentials properties file next
         if (credentialsFile != null) {
             try {
-                debug("Reading security credentials from properties file: " + credentialsFile);
+                logger.debug("Reading security credentials from properties file: " + credentialsFile);
                 PropertiesCredentials credentials = new PropertiesCredentials(credentialsFile);
-                debug("Using AWS credentials from file: " + credentialsFile);
+                logger.debug("Using AWS credentials from file: " + credentialsFile);
                 return new StaticCredentialsProvider(credentials);
             } catch (Exception e) {
                 throw new AmazonClientException(
@@ -191,13 +183,13 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         // Fall back to the default credentials chain provider if credentials weren't explicitly set
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
-            debug("Loading security credentials from default credentials provider chain.");
+            logger.debug("Loading security credentials from default credentials provider chain.");
             throw new AmazonClientException(
                     "Unable find AWS security credentials.  "
                             + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
                             + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
         }
-        debug("Using default AWS credentials provider chain to load credentials");
+        logger.debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
     }
 
@@ -223,12 +215,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
         // Attempt to use an explicit proxy configuration
         if (proxyHost != null || proxyPort != null) {
-            debug("Reading proxy settings from context.xml");
+            logger.debug("Reading proxy settings from context.xml");
             if (proxyHost == null || proxyPort == null) {
                 throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
                         + " Both proxy hot and proxy port needs to be specified");
             }
-            debug("Using proxy host and port from context.xml");
+            logger.debug("Using proxy host and port from context.xml");
             clientConfiguration.withProxyHost(proxyHost).withProxyPort(proxyPort);
         }
 
@@ -260,9 +252,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         LegacyTomcatSessionConverter legacyConverter = new LegacyTomcatSessionConverter(this, classLoader,
                 maxInactiveInterval);
         DefaultTomcatSessionConverter defaultConverter = new DefaultTomcatSessionConverter(this, classLoader);
-        // Converter compatible with the legacy schema but can understand new schema
-        return new SessionConverter(TomcatSessionConverterChain.wrap(legacyConverter, defaultConverter),
-                new LegacyDynamoDBSessionItemConverter());
+        // Converter that 'writes' with the new schema but can still read the legacy schema
+        return new SessionConverter(TomcatSessionConverterChain.wrap(defaultConverter, legacyConverter),
+                new DefaultDynamoSessionItemConverter());
     }
 
     /**
@@ -282,29 +274,5 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
                     + " DynamoDB SessionManager can only be used with a Context");
             throw new IllegalStateException(e);
         }
-    }
-
-    //
-    // Logger Utility Functions
-    //
-
-    public static void debug(String s) {
-        logger.debug(s);
-    }
-
-    public static void warn(String s) {
-        logger.warn(s);
-    }
-
-    public static void warn(String s, Exception e) {
-        logger.warn(s, e);
-    }
-
-    public static void error(String s) {
-        logger.error(s);
-    }
-
-    public static void error(String s, Exception e) {
-        logger.error(s, e);
     }
 }
