@@ -18,10 +18,14 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.catalina.Session;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 
 import com.amazonaws.services.dynamodb.sessionmanager.DynamoSessionItem;
 
 public class TomcatSessionConverterChain implements TomcatSessionConverter {
+
+    private static final Log logger = LogFactory.getLog(TomcatSessionConverterChain.class);
 
     private final List<TomcatSessionConverter> tomcatSessionCoverters;
 
@@ -35,11 +39,15 @@ public class TomcatSessionConverterChain implements TomcatSessionConverter {
             try {
                 return converter.toSession(sessionItem);
             } catch (SessionConversionException e) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Could not convert session with " + converter.getClass().getSimpleName(), e);
+                }
                 // Try next converter in chain
             }
         }
         throw new SessionConversionException(
-                "Unable to convert Dynamo storage representation to a Tomcat Session with any converter provided");
+                "Unable to convert Dynamo storage representation to a Tomcat Session with any converter provided. "
+                        + "Turn on debug logging to get more detailed information about the actual exception encountered");
     }
 
     public static TomcatSessionConverter wrap(TomcatSessionConverter... converters) {
