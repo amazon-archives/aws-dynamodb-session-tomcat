@@ -18,6 +18,8 @@ import java.nio.ByteBuffer;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 @DynamoDBTable(tableName = DynamoDBSessionManager.DEFAULT_TABLE_NAME)
@@ -27,6 +29,9 @@ public class DynamoSessionItem {
     public static final String SESSION_DATA_ATTRIBUTE_NAME = "sessionData";
     public static final String CREATED_AT_ATTRIBUTE_NAME = "createdAt";
     public static final String LAST_UPDATED_AT_ATTRIBUTE_NAME = "lastUpdatedAt";
+    public static final String EXPIRED_AT_ATTRIBUTE_NAME = "expiredAt";
+    public static final String EXPIRED_DATE_ATTRIBUTE_NAME = "expiredDate";
+    public static final String EXPIRED_INDEX_NAME = "expired";
 
     private String sessionId;
     private ByteBuffer sessionData;
@@ -34,6 +39,9 @@ public class DynamoSessionItem {
     // Legacy item attributes
     private long lastUpdatedTime;
     private long createdTime;
+
+    private long expiredAt;
+    private String expiredDate;
 
     public DynamoSessionItem() {
     }
@@ -60,38 +68,40 @@ public class DynamoSessionItem {
         this.sessionData = sessionData;
     }
 
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
     @DynamoDBAttribute(attributeName = LAST_UPDATED_AT_ATTRIBUTE_NAME)
     public long getLastUpdatedTime() {
         return lastUpdatedTime;
     }
 
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
     public void setLastUpdatedTime(long lastUpdatedTime) {
         this.lastUpdatedTime = lastUpdatedTime;
     }
 
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
     @DynamoDBAttribute(attributeName = CREATED_AT_ATTRIBUTE_NAME)
     public long getCreatedTime() {
         return createdTime;
     }
 
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
     public void setCreatedTime(long createdTime) {
         this.createdTime = createdTime;
     }
+
+    @DynamoDBIndexRangeKey(globalSecondaryIndexName = EXPIRED_INDEX_NAME, attributeName = EXPIRED_AT_ATTRIBUTE_NAME)
+	public long getExpiredAt() {
+		return expiredAt;
+	}
+
+	public void setExpiredAt(long expiredAt) {
+		this.expiredAt = expiredAt;
+	}
+
+    @DynamoDBIndexHashKey(globalSecondaryIndexName = EXPIRED_INDEX_NAME, attributeName = EXPIRED_DATE_ATTRIBUTE_NAME)
+	public String getExpiredDate() {
+		return expiredDate;
+	}
+
+	public void setExpiredDate(String expiredDate) {
+		this.expiredDate = expiredDate;
+	}
 
 }

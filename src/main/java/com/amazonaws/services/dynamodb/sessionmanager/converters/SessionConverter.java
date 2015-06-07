@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+zzzz * Copyright 2013 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -46,8 +46,8 @@ public final class SessionConverter implements TomcatSessionConverter, DynamoSes
      * Factory method to create a SessionConverter with the default implementation of
      * TomcatSessionConverter and DynamoSessionConverter
      */
-    public static SessionConverter createDefaultSessionConverter(Manager manager, ClassLoader classLoader) {
-        return new SessionConverter(new DefaultTomcatSessionConverter(manager, classLoader),
+    public static SessionConverter createDefaultSessionConverter(Manager manager, ClassLoader classLoader, int maxInactiveInterval) {
+        return new SessionConverter(new DefaultTomcatSessionConverter(manager, classLoader, maxInactiveInterval),
                 new DefaultDynamoSessionItemConverter());
     }
 

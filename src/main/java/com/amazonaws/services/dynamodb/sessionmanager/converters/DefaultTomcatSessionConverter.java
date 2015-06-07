@@ -19,10 +19,10 @@ import java.io.ObjectInputStream;
 
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
-import org.apache.catalina.session.StandardSession;
 import org.apache.catalina.util.CustomObjectInputStream;
 
 import com.amazonaws.services.dynamodb.sessionmanager.DynamoSessionItem;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter.LegacySession;
 import com.amazonaws.services.dynamodb.sessionmanager.util.ValidatorUtils;
 import com.amazonaws.util.IOUtils;
 
@@ -30,12 +30,14 @@ public class DefaultTomcatSessionConverter implements TomcatSessionConverter {
 
     private final ClassLoader classLoader;
     private final Manager manager;
+    private final int maxInactiveInterval;
 
-    public DefaultTomcatSessionConverter(Manager manager, ClassLoader classLoader) {
+    public DefaultTomcatSessionConverter(Manager manager, ClassLoader classLoader, int maxInactiveInterval) {
         ValidatorUtils.nonNull(manager, "Manager");
         ValidatorUtils.nonNull(classLoader, "ClassLoader");
         this.classLoader = classLoader;
         this.manager = manager;
+        this.maxInactiveInterval = maxInactiveInterval;
     }
 
     @Override
@@ -45,7 +47,12 @@ public class DefaultTomcatSessionConverter implements TomcatSessionConverter {
             ByteArrayInputStream fis = new ByteArrayInputStream(sessionItem.getSessionData().array());
             ois = new CustomObjectInputStream(fis, classLoader);
 
-            StandardSession session = new StandardSession(manager);
+            LegacySession session = new LegacySession(manager);
+            session.setValid(true);
+            session.setId(sessionItem.getSessionId(), false);
+            session.setCreationTime(sessionItem.getCreatedTime());
+            session.setLastAccessedTime(sessionItem.getLastUpdatedTime());
+            session.setMaxInactiveInterval(maxInactiveInterval);
             session.readObjectData(ois);
             return session;
         } catch (Exception e) {

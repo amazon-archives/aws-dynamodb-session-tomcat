@@ -14,6 +14,9 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.catalina.Session;
@@ -37,12 +40,20 @@ public class ExpiredSessionReaper implements Runnable {
      */
     @Override
     public void run() {
-        Iterable<Session> sessions = sessionStorage.listSessions();
-        for (Session session : sessions) {
-            if (ExpiredSessionReaper.isExpired(session)) {
-                sessionStorage.deleteSession(session.getId());
-            }
-        }
+        Calendar calendar = Calendar.getInstance();
+        String today = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+        executeSessionReaper(today);
+
+        calendar.add(Calendar.DATE, -1);
+        String yesterday = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+        executeSessionReaper(yesterday);
+    }
+
+    private void executeSessionReaper(String hashKey) {
+    	DynamoSessionItem item = new DynamoSessionItem();
+    	item.setExpiredDate(hashKey);
+    	List<DynamoSessionItem> sessions = sessionStorage.listExpiredSessions(item);
+    	sessionStorage.batchDeleteSessions(sessions);
     }
 
     public static boolean isExpired(Session session) {
