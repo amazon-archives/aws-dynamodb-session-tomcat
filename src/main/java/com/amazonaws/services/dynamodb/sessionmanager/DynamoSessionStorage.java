@@ -57,12 +57,7 @@ public class DynamoSessionStorage {
     }
 
     public void deleteSession(String sessionId) {
-        DynamoSessionItem sessionItem = mapper.load(new DynamoSessionItem(sessionId));
-        if(sessionItem != null) {
-        	if(sessionItem.getExpiredAt() < System.currentTimeMillis()) {
-                mapper.delete(new DynamoSessionItem(sessionId));
-        	}
-        }
+        mapper.delete(new DynamoSessionItem(sessionId));
     }
 
     public void batchDeleteSessions(Object... sessionId) {
