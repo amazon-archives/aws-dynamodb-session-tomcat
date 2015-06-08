@@ -18,6 +18,7 @@ import java.io.File;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.Session;
 import org.apache.catalina.session.PersistentManagerBase;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
@@ -129,6 +130,10 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     public void setProxyPort(Integer proxyPort) {
         this.proxyPort = proxyPort;
+    }
+
+    public Session findSessionNoTouch(String id) {
+        return sessions.get(id);
     }
 
     @Override
@@ -251,7 +256,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         ClassLoader classLoader = getAssociatedContext().getLoader().getClassLoader();
         LegacyTomcatSessionConverter legacyConverter = new LegacyTomcatSessionConverter(this, classLoader,
                 maxInactiveInterval);
-        DefaultTomcatSessionConverter defaultConverter = new DefaultTomcatSessionConverter(this, classLoader);
+        DefaultTomcatSessionConverter defaultConverter = new DefaultTomcatSessionConverter(this, classLoader, maxInactiveInterval);
         // Converter that 'writes' with the new schema but can still read the legacy schema
         return new SessionConverter(TomcatSessionConverterChain.wrap(defaultConverter, legacyConverter),
                 new DefaultDynamoSessionItemConverter());
@@ -262,7 +267,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
      * The cast is safe as it only makes sense to use a session manager within the context of a
      * webapp, the Tomcat 8 version of getContainer just delegates to getContext. When Tomcat7 is no
      * longer supported this can be changed to getContext
-     * 
+     *
      * @return The context this manager is associated with
      */
     // TODO Inline this method with getManager().getContext() when Tomcat7 is no longer supported

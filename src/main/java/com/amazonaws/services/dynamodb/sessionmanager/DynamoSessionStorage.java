@@ -16,14 +16,20 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.catalina.Session;
 
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.util.ValidatorUtils;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.PaginatedQueryList;
 import com.amazonaws.services.dynamodbv2.datamodeling.PaginatedScanList;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 
 public class DynamoSessionStorage {
 
@@ -54,14 +60,35 @@ public class DynamoSessionStorage {
         mapper.delete(new DynamoSessionItem(sessionId));
     }
 
+    public void batchDeleteSessions(Object... sessionId) {
+        mapper.batchDelete(sessionId);
+    }
+
     public void saveSession(Session session) {
         mapper.save(sessionConverter.toSessionItem(session));
     }
 
+    @Deprecated
     public Iterable<Session> listSessions() {
         PaginatedScanList<DynamoSessionItem> sessions = mapper.scan(DynamoSessionItem.class,
                 new DynamoDBScanExpression());
         return new SessionConverterIterable(sessions);
+    }
+
+    public List<DynamoSessionItem> listExpiredSessions(DynamoSessionItem hashKey) {
+        Condition condition = new Condition();
+        condition.withComparisonOperator(ComparisonOperator.LT);
+        condition.withAttributeValueList(new AttributeValue().withN(String.valueOf(System.currentTimeMillis())));
+
+        DynamoDBQueryExpression<DynamoSessionItem> expression = new DynamoDBQueryExpression<DynamoSessionItem>();
+        expression.withIndexName(DynamoSessionItem.EXPIRED_INDEX_NAME);
+        expression.withHashKeyValues(hashKey);
+        expression.withConsistentRead(false);
+        expression.withRangeKeyCondition(DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME, condition);
+        expression.withLimit(ExpiredSessionReaperExecutor.REAPER_LIMIT);
+
+        PaginatedQueryList<DynamoSessionItem> sessions = mapper.query(DynamoSessionItem.class, expression);
+      return sessions;
     }
 
     private class SessionConverterIterable implements Iterable<Session> {

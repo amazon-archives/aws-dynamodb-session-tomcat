@@ -81,26 +81,44 @@ public class DynamoDBSessionStore extends StoreBase {
 
     @Override
     public Session load(String id) throws ClassNotFoundException, IOException {
-        Session session = sessionStorage.loadSession(id);
-        if (session == null) {
-            logger.warn("Unable to load session with id " + id);
-            return null;
-        }
+        try {
+            Session session = ((DynamoDBSessionManager) getManager())
+                    .findSessionNoTouch(id);
+            if (session != null && session.isValid()) {
+                return session;
+            }
+            session = sessionStorage.loadSession(id);
+            if (session == null) {
+                logger.warn("Unable to load session with id " + id);
+                return null;
+            }
 
-        sessionIds.add(id);
-        return session;
+            sessionIds.add(id);
+            return session;
+        } catch (Throwable t) {
+            logger.warn("DynamoDBSessionStore#load", t);
+        }
+        return null;
     }
 
     @Override
     public void save(Session session) throws IOException {
-        sessionStorage.saveSession(session);
-        sessionIds.add(session.getId());
+        try {
+            sessionStorage.saveSession(session);
+            sessionIds.add(session.getId());
+        } catch (Throwable t) {
+            logger.warn("DynamoDBSessionStore#save", t);
+        }
     }
 
     @Override
     public void remove(String id) throws IOException {
-        sessionStorage.deleteSession(id);
-        sessionIds.remove(id);
+        try {
+            sessionStorage.deleteSession(id);
+            sessionIds.remove(id);
+        } catch (Throwable t) {
+            logger.warn("DynamoDBSessionStore#remove", t);
+        }
     }
 
 }

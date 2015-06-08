@@ -28,6 +28,7 @@ import org.junit.Test;
  */
 public class DefaultSessionConverterTest {
 
+    private static final int MAX_INACTIVE_INTERVAL = 60;
     private static final TestSessionFactory SESSION_TEMPLATE = new TestSessionFactory();
 
     private SessionConverter sessionConverter;
@@ -36,7 +37,7 @@ public class DefaultSessionConverterTest {
     @Before
     public void setup() {
         sessionConverter = SessionConverter.createDefaultSessionConverter(SESSION_TEMPLATE.getManager(), getClass()
-                .getClassLoader());
+                .getClassLoader(), MAX_INACTIVE_INTERVAL);
         session = SESSION_TEMPLATE.createStandardSession();
     }
 

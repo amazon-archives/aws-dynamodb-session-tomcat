@@ -25,16 +25,17 @@ import java.util.concurrent.TimeUnit;
  */
 public class ExpiredSessionReaperExecutor {
 
-    private static final int REAP_FREQUENCY_HOURS = 12;
-    private static final int MAX_JITTER_HOURS = 5;
+    public static final int REAPER_LIMIT = 100;
+    private static final int REAP_FREQUENCY_MINUTES = 5;
+    private static final int MAX_JITTER_MINUTES = 3;
     private static final String THREAD_NAME = "dynamo-session-manager-expired-sesion-reaper";
 
     private final ScheduledThreadPoolExecutor executor;
 
     public ExpiredSessionReaperExecutor(Runnable expiredSessionRunnable) {
-        int initialDelay = new Random().nextInt(MAX_JITTER_HOURS) + 1;
+        int initialDelay = new Random().nextInt(MAX_JITTER_MINUTES) + 1;
         executor = new ScheduledThreadPoolExecutor(1, new ExpiredSessionReaperThreadFactory());
-        executor.scheduleAtFixedRate(expiredSessionRunnable, initialDelay, REAP_FREQUENCY_HOURS, TimeUnit.HOURS);
+        executor.scheduleAtFixedRate(expiredSessionRunnable, initialDelay, REAP_FREQUENCY_MINUTES, TimeUnit.MINUTES);
     }
 
     /**

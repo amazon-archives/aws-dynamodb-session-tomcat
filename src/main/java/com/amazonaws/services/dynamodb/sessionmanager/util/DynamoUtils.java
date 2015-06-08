@@ -21,8 +21,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig.TableNameOverride;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.Projection;
+import com.amazonaws.services.dynamodbv2.model.ProjectionType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 
@@ -37,12 +40,28 @@ public class DynamoUtils {
         request.withKeySchema(new KeySchemaElement().withAttributeName(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME)
                 .withKeyType(KeyType.HASH));
 
+        GlobalSecondaryIndex gsi = new GlobalSecondaryIndex()
+            .withIndexName(DynamoSessionItem.EXPIRED_INDEX_NAME)
+            .withProvisionedThroughput(new ProvisionedThroughput()
+                .withReadCapacityUnits(readCapacityUnits)
+                .withWriteCapacityUnits(writeCapacityUnits))
+                .withProjection(new Projection().withProjectionType(ProjectionType.KEYS_ONLY));
+        gsi.withKeySchema(new KeySchemaElement().withAttributeName(DynamoSessionItem.EXPIRED_DATE_ATTRIBUTE_NAME).withKeyType(KeyType.HASH));
+        gsi.withKeySchema(new KeySchemaElement().withAttributeName(DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME).withKeyType(KeyType.RANGE));
+
         request.withAttributeDefinitions(new AttributeDefinition().withAttributeName(
                 DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME).withAttributeType(ScalarAttributeType.S));
+
+        request.withAttributeDefinitions(new AttributeDefinition().withAttributeName(
+                DynamoSessionItem.EXPIRED_DATE_ATTRIBUTE_NAME).withAttributeType(ScalarAttributeType.S));
+
+        request.withAttributeDefinitions(new AttributeDefinition().withAttributeName(
+                DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME).withAttributeType(ScalarAttributeType.N));
 
         request.setProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readCapacityUnits)
                 .withWriteCapacityUnits(writeCapacityUnits));
 
+        request.withGlobalSecondaryIndexes(gsi);
         dynamo.createTable(request);
     }
 
