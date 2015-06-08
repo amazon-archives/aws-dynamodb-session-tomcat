@@ -90,7 +90,7 @@ public class DynamoSessionStorage {
     	expression.withHashKeyValues(hashKey);
     	expression.withConsistentRead(false);
     	expression.withRangeKeyCondition(DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME, condition);
-    	expression.withLimit(100);
+    	expression.withLimit(ExpiredSessionReaperExecutor.REAPER_LIMIT);
 
     	PaginatedQueryList<DynamoSessionItem> sessions = mapper.query(DynamoSessionItem.class, expression);
       return sessions;
