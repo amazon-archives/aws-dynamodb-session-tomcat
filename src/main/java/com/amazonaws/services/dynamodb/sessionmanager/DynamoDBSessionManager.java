@@ -240,7 +240,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
                     + "and automatic table creation has been disabled in context.xml");
         }
 
-    	//dynamo.deleteTable(this.tableName);
         if (!tableExists) {
             DynamoUtils.createSessionTable(dynamo, this.tableName, this.readCapacityUnits, this.writeCapacityUnits);
         }
