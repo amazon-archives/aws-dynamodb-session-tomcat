@@ -26,8 +26,8 @@ import java.util.concurrent.TimeUnit;
 public class ExpiredSessionReaperExecutor {
 
     public static final int REAPER_LIMIT = 100;
-    private static final int REAP_FREQUENCY_MINUTES = 1;
-    private static final int MAX_JITTER_MINUTES = 1;
+    private static final int REAP_FREQUENCY_MINUTES = 5;
+    private static final int MAX_JITTER_MINUTES = 3;
     private static final String THREAD_NAME = "dynamo-session-manager-expired-sesion-reaper";
 
     private final ScheduledThreadPoolExecutor executor;
