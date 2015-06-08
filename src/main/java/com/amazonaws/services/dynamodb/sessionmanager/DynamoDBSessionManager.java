@@ -132,9 +132,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.proxyPort = proxyPort;
     }
 
-	public Session findSessionNoTouch(String id) {
-		return sessions.get(id);
-	}
+    public Session findSessionNoTouch(String id) {
+        return sessions.get(id);
+    }
 
     @Override
     protected void initInternal() throws LifecycleException {

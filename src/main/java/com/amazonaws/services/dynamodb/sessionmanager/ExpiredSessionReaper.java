@@ -45,28 +45,28 @@ public class ExpiredSessionReaper implements Runnable {
      */
     @Override
     public void run() {
-		try {
-			Calendar calendar = Calendar.getInstance();
-			String today = new SimpleDateFormat("yyyy-MM-dd").format(calendar
-					.getTime());
-			executeSessionReaper(today);
+        try {
+            Calendar calendar = Calendar.getInstance();
+            String today = new SimpleDateFormat("yyyy-MM-dd").format(calendar
+                    .getTime());
+            executeSessionReaper(today);
 
-			calendar.add(Calendar.DATE, -1);
-			String yesterday = new SimpleDateFormat("yyyy-MM-dd")
-					.format(calendar.getTime());
-			executeSessionReaper(yesterday);
-		} catch (Throwable t) {
-			logger.warn("ExpiredSessionReaper#run", t);
-		}
+            calendar.add(Calendar.DATE, -1);
+            String yesterday = new SimpleDateFormat("yyyy-MM-dd")
+                    .format(calendar.getTime());
+            executeSessionReaper(yesterday);
+        } catch (Throwable t) {
+            logger.warn("ExpiredSessionReaper#run", t);
+        }
     }
 
     private void executeSessionReaper(String hashKey) {
-    	DynamoSessionItem item = new DynamoSessionItem();
-    	item.setExpiredDate(hashKey);
-    	List<DynamoSessionItem> sessions = sessionStorage.listExpiredSessions(item);
-    	for(DynamoSessionItem session: sessions) {
-        	sessionStorage.deleteSession(session.getSessionId());
-    	}
+        DynamoSessionItem item = new DynamoSessionItem();
+        item.setExpiredDate(hashKey);
+        List<DynamoSessionItem> sessions = sessionStorage.listExpiredSessions(item);
+        for(DynamoSessionItem session: sessions) {
+            sessionStorage.deleteSession(session.getSessionId());
+        }
     }
 
     public static boolean isExpired(Session session) {

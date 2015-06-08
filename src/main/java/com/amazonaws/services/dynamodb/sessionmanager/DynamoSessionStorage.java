@@ -80,14 +80,14 @@ public class DynamoSessionStorage {
         condition.withComparisonOperator(ComparisonOperator.LT);
         condition.withAttributeValueList(new AttributeValue().withN(String.valueOf(System.currentTimeMillis())));
 
-    	DynamoDBQueryExpression<DynamoSessionItem> expression = new DynamoDBQueryExpression<DynamoSessionItem>();
-    	expression.withIndexName(DynamoSessionItem.EXPIRED_INDEX_NAME);
-    	expression.withHashKeyValues(hashKey);
-    	expression.withConsistentRead(false);
-    	expression.withRangeKeyCondition(DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME, condition);
-    	expression.withLimit(ExpiredSessionReaperExecutor.REAPER_LIMIT);
+        DynamoDBQueryExpression<DynamoSessionItem> expression = new DynamoDBQueryExpression<DynamoSessionItem>();
+        expression.withIndexName(DynamoSessionItem.EXPIRED_INDEX_NAME);
+        expression.withHashKeyValues(hashKey);
+        expression.withConsistentRead(false);
+        expression.withRangeKeyCondition(DynamoSessionItem.EXPIRED_AT_ATTRIBUTE_NAME, condition);
+        expression.withLimit(ExpiredSessionReaperExecutor.REAPER_LIMIT);
 
-    	PaginatedQueryList<DynamoSessionItem> sessions = mapper.query(DynamoSessionItem.class, expression);
+        PaginatedQueryList<DynamoSessionItem> sessions = mapper.query(DynamoSessionItem.class, expression);
       return sessions;
     }
 

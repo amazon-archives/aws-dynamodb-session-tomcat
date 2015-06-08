@@ -87,21 +87,21 @@ public class DynamoSessionItem {
     }
 
     @DynamoDBIndexRangeKey(globalSecondaryIndexName = EXPIRED_INDEX_NAME, attributeName = EXPIRED_AT_ATTRIBUTE_NAME)
-	public long getExpiredAt() {
-		return expiredAt;
-	}
+    public long getExpiredAt() {
+        return expiredAt;
+    }
 
-	public void setExpiredAt(long expiredAt) {
-		this.expiredAt = expiredAt;
-	}
+    public void setExpiredAt(long expiredAt) {
+        this.expiredAt = expiredAt;
+    }
 
     @DynamoDBIndexHashKey(globalSecondaryIndexName = EXPIRED_INDEX_NAME, attributeName = EXPIRED_DATE_ATTRIBUTE_NAME)
-	public String getExpiredDate() {
-		return expiredDate;
-	}
+    public String getExpiredDate() {
+        return expiredDate;
+    }
 
-	public void setExpiredDate(String expiredDate) {
-		this.expiredDate = expiredDate;
-	}
+    public void setExpiredDate(String expiredDate) {
+        this.expiredDate = expiredDate;
+    }
 
 }
