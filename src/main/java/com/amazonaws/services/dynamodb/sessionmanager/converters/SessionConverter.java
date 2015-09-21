@@ -51,15 +51,4 @@ public final class SessionConverter implements TomcatSessionConverter, DynamoSes
                 new DefaultDynamoSessionItemConverter());
     }
 
-    /**
-     * Factory method to create a SessionConverter with the legacy implementation of
-     * TomcatSessionConverter and DynamoSessionConverter
-     */
-    public static SessionConverter createLegacySessionConverter(Manager manager,
-                                                                ClassLoader classLoader,
-                                                                int maxInactiveInterval) {
-        return new SessionConverter(new LegacyTomcatSessionConverter(manager, classLoader, maxInactiveInterval),
-                new LegacyDynamoDBSessionItemConverter());
-    }
-
 }

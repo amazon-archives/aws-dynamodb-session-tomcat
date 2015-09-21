@@ -19,8 +19,8 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter.LegacySession;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.TestSessionFactory;
+import com.amazonaws.services.dynamodb.sessionmanager.converters.TestSessionFactory.TestStandardSession;
 
 public class ExpiredSessionReaperTest {
 
@@ -39,15 +39,15 @@ public class ExpiredSessionReaperTest {
         assertFalse(ExpiredSessionReaper.isExpired(createImmortalSession()));
     }
 
-    public static LegacySession createActiveSession() {
-        LegacySession activeSession = new TestSessionFactory().withSessionId("active")
-                .withLastAccessedTime(System.currentTimeMillis()).createLegacySession();
+    public static TestStandardSession createActiveSession() {
+        TestStandardSession activeSession = new TestSessionFactory().withSessionId("active")
+                .withLastAccessedTime(System.currentTimeMillis()).createTestStandardSession();
         return activeSession;
     }
 
-    public static LegacySession createExpiredSession() {
-        LegacySession expiredSession = new TestSessionFactory().withSessionId("expired").withLastAccessedTime(0)
-                .createLegacySession();
+    public static TestStandardSession createExpiredSession() {
+        TestStandardSession expiredSession = new TestSessionFactory().withSessionId("expired").withLastAccessedTime(0)
+                .createTestStandardSession();
         return expiredSession;
     }
 
@@ -55,9 +55,9 @@ public class ExpiredSessionReaperTest {
      * A negative value for maxInactiveInterval means the session never expires. isExpired should
      * always return false no matter what
      */
-    public static LegacySession createImmortalSession() {
-        LegacySession immortalSession = new TestSessionFactory().withSessionId("immortal").withMaxInactiveInterval(-1)
-                .withLastAccessedTime(0).createLegacySession();
+    public static TestStandardSession createImmortalSession() {
+        TestStandardSession immortalSession = new TestSessionFactory().withSessionId("immortal").withMaxInactiveInterval(-1)
+                .withLastAccessedTime(0).createTestStandardSession();
         return immortalSession;
     }
 }

@@ -25,15 +25,9 @@ public class DynamoSessionItem {
 
     public static final String SESSION_ID_ATTRIBUTE_NAME = "sessionId";
     public static final String SESSION_DATA_ATTRIBUTE_NAME = "sessionData";
-    public static final String CREATED_AT_ATTRIBUTE_NAME = "createdAt";
-    public static final String LAST_UPDATED_AT_ATTRIBUTE_NAME = "lastUpdatedAt";
 
     private String sessionId;
     private ByteBuffer sessionData;
-
-    // Legacy item attributes
-    private long lastUpdatedTime;
-    private long createdTime;
 
     public DynamoSessionItem() {
     }
@@ -58,40 +52,6 @@ public class DynamoSessionItem {
 
     public void setSessionData(ByteBuffer sessionData) {
         this.sessionData = sessionData;
-    }
-
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
-    @DynamoDBAttribute(attributeName = LAST_UPDATED_AT_ATTRIBUTE_NAME)
-    public long getLastUpdatedTime() {
-        return lastUpdatedTime;
-    }
-
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
-    public void setLastUpdatedTime(long lastUpdatedTime) {
-        this.lastUpdatedTime = lastUpdatedTime;
-    }
-
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
-    @DynamoDBAttribute(attributeName = CREATED_AT_ATTRIBUTE_NAME)
-    public long getCreatedTime() {
-        return createdTime;
-    }
-
-    /**
-     * @deprecated Part of the legacy item format. Will be removed in a later version
-     */
-    @Deprecated
-    public void setCreatedTime(long createdTime) {
-        this.createdTime = createdTime;
     }
 
 }

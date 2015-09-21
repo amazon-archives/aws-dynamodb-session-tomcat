@@ -18,7 +18,6 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,7 +28,6 @@ import org.apache.catalina.session.StandardSession;
 
 import com.amazonaws.services.dynamodb.sessionmanager.CustomSessionClass;
 import com.amazonaws.services.dynamodb.sessionmanager.DynamoSessionItem;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter.LegacySession;
 
 /**
  * Utility class to create new {@link Session} and {@link DynamoSessionItem} object for tests. Has
@@ -100,7 +98,7 @@ public class TestSessionFactory {
     }
 
     public final StandardSession createStandardSession() {
-        LegacySession session = new LegacySession(null);
+        TestStandardSession session = new TestStandardSession(null);
         session.setValid(true);
         session.setId(getSessionId(), false);
         session.setCreationTime(getCreationTime());
@@ -117,16 +115,8 @@ public class TestSessionFactory {
         return session;
     }
 
-    public final LegacySession createLegacySession() {
-        return (LegacySession) createStandardSession();
-    }
-
-    public final DynamoSessionItem createLegacySessionItem() throws IOException {
-        DynamoSessionItem sessionItem = new DynamoSessionItem(getSessionId());
-        sessionItem.setCreatedTime(getCreationTime());
-        sessionItem.setLastUpdatedTime(getCreationTime());
-        sessionItem.setSessionData(LegacyDynamoDBSessionItemConverter.objectToByteBuffer(getSessionAttributes()));
-        return sessionItem;
+    public final TestStandardSession createTestStandardSession() {
+        return (TestStandardSession) createStandardSession();
     }
 
     private static Map<String, Object> getDefaultSessionAttributes() {
@@ -141,4 +131,28 @@ public class TestSessionFactory {
         return mockManager;
     }
 
+    /**
+     * Subclassed standard session to allow setting lastAccessedTime through means other than
+     * readObject
+     */
+    public static class TestStandardSession extends StandardSession {
+
+        private static final long serialVersionUID = 9163946735192227235L;
+
+        public TestStandardSession(Manager manager) {
+            super(manager);
+        }
+
+        public void setLastAccessedTime(long lastAccessedTime) {
+            this.lastAccessedTime = lastAccessedTime;
+            this.thisAccessedTime = lastAccessedTime;
+        }
+
+        public void setSessionAttributes(Map<String, Object> attributes) {
+            for (Entry<String, Object> attribute : attributes.entrySet()) {
+                this.setAttribute(attribute.getKey(), attribute.getValue(), false);
+            }
+        }
+
+    }
 }

@@ -30,11 +30,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.DefaultDynamoSessionItemConverter;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.DefaultTomcatSessionConverter;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.LegacyTomcatSessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
-import com.amazonaws.services.dynamodb.sessionmanager.converters.TomcatSessionConverterChain;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
@@ -249,12 +245,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     private SessionConverter getSessionConverter() {
         ClassLoader classLoader = getAssociatedContext().getLoader().getClassLoader();
-        LegacyTomcatSessionConverter legacyConverter = new LegacyTomcatSessionConverter(this, classLoader,
-                maxInactiveInterval);
-        DefaultTomcatSessionConverter defaultConverter = new DefaultTomcatSessionConverter(this, classLoader);
-        // Converter that 'writes' with the new schema but can still read the legacy schema
-        return new SessionConverter(TomcatSessionConverterChain.wrap(defaultConverter, legacyConverter),
-                new DefaultDynamoSessionItemConverter());
+        return SessionConverter.createDefaultSessionConverter(this, classLoader);
     }
 
     /**
