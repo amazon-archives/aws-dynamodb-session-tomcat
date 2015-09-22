@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.apache.catalina.session.StoreBase;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
+import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConversionException;
 import com.amazonaws.services.dynamodb.sessionmanager.util.ValidatorUtils;
 
 /**
@@ -37,10 +38,12 @@ public class DynamoDBSessionStore extends StoreBase {
 
     private final Set<String> sessionIds = Collections.synchronizedSet(new HashSet<String>());
     private final DynamoSessionStorage sessionStorage;
+    private final boolean deleteCorruptSessions;
 
-    public DynamoDBSessionStore(DynamoSessionStorage sessionStorage) {
+    public DynamoDBSessionStore(DynamoSessionStorage sessionStorage, boolean deleteCorruptSessions) {
         ValidatorUtils.nonNull(sessionStorage, "SessionStorage");
         this.sessionStorage = sessionStorage;
+        this.deleteCorruptSessions = deleteCorruptSessions;
     }
 
     @Override
@@ -81,7 +84,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     @Override
     public Session load(String id) throws ClassNotFoundException, IOException {
-        Session session = sessionStorage.loadSession(id);
+        Session session = tryLoadSession(id);
         if (session == null) {
             logger.warn("Unable to load session with id " + id);
             return null;
@@ -101,6 +104,30 @@ public class DynamoDBSessionStore extends StoreBase {
     public void remove(String id) throws IOException {
         sessionStorage.deleteSession(id);
         sessionIds.remove(id);
+    }
+
+    private Session tryLoadSession(String id) {
+        try {
+            return sessionStorage.loadSession(id);
+        } catch (SessionConversionException e) {
+            if (deleteCorruptSessions) {
+                deleteCorruptSession(id, e);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Delete corrupt session from Dynamo if configured to do so.
+     * 
+     * @param id
+     *            ID of session to delete
+     * @param e
+     *            Exception that caused the session to fail to deserialize
+     */
+    private void deleteCorruptSession(String id, SessionConversionException e) {
+        logger.warn("Unable to load session with id " + id + ". Deleting from session store", e);
+        sessionStorage.deleteSession(id);
     }
 
 }

@@ -60,6 +60,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private String tableName = DEFAULT_TABLE_NAME;
     private String proxyHost;
     private Integer proxyPort;
+    private boolean deleteCorruptSessions = false;
 
     private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
 
@@ -127,6 +128,10 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.proxyPort = proxyPort;
     }
 
+    public void setDeleteCorruptSessions(boolean deleteCorruptSessions) {
+        this.deleteCorruptSessions = deleteCorruptSessions;
+    }
+
     @Override
     protected void initInternal() throws LifecycleException {
         this.setDistributable(true);
@@ -134,7 +139,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         AmazonDynamoDBClient dynamoClient = createDynamoClient();
         initDynamoTable(dynamoClient);
         DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
-        setStore(new DynamoDBSessionStore(sessionStorage));
+        setStore(new DynamoDBSessionStore(sessionStorage, deleteCorruptSessions));
         new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
     }
 
@@ -172,7 +177,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
             } catch (Exception e) {
                 throw new AmazonClientException(
                         "Unable to read AWS security credentials from file specified in context.xml: "
-                                + credentialsFile, e);
+                                + credentialsFile,
+                        e);
             }
         }
 
@@ -180,10 +186,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
             logger.debug("Loading security credentials from default credentials provider chain.");
-            throw new AmazonClientException(
-                    "Unable find AWS security credentials.  "
-                            + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
-                            + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
+            throw new AmazonClientException("Unable to find AWS security credentials.  "
+                    + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
+                    + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
         }
         logger.debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;

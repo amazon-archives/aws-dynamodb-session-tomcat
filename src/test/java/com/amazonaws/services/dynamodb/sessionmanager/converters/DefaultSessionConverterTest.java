@@ -35,8 +35,8 @@ public class DefaultSessionConverterTest {
 
     @Before
     public void setup() {
-        sessionConverter = SessionConverter.createDefaultSessionConverter(SESSION_TEMPLATE.getManager(), getClass()
-                .getClassLoader());
+        sessionConverter = SessionConverter.createDefaultSessionConverter(SESSION_TEMPLATE.getManager(),
+                getClass().getClassLoader());
         session = SESSION_TEMPLATE.createStandardSession();
     }
 

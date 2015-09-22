@@ -31,8 +31,8 @@ public class ExpiredSessionReaperIntegrationTest extends SessionStorageIntegrati
 
     @Before
     public void setup() {
-        sessionStorage = createSessionStorage(SessionConverter.createDefaultSessionConverter(
-                new TestSessionFactory().getManager(), getClass().getClassLoader()));
+        sessionStorage = createSessionStorage(SessionConverter
+                .createDefaultSessionConverter(new TestSessionFactory().getManager(), getClass().getClassLoader()));
     }
 
     /**

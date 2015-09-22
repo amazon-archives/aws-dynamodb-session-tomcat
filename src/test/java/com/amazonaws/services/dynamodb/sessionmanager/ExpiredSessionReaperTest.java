@@ -56,8 +56,8 @@ public class ExpiredSessionReaperTest {
      * always return false no matter what
      */
     public static TestStandardSession createImmortalSession() {
-        TestStandardSession immortalSession = new TestSessionFactory().withSessionId("immortal").withMaxInactiveInterval(-1)
-                .withLastAccessedTime(0).createTestStandardSession();
+        TestStandardSession immortalSession = new TestSessionFactory().withSessionId("immortal")
+                .withMaxInactiveInterval(-1).withLastAccessedTime(0).createTestStandardSession();
         return immortalSession;
     }
 }

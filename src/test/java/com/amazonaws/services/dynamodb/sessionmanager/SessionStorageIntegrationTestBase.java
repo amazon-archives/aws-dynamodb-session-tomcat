@@ -57,8 +57,8 @@ public class SessionStorageIntegrationTestBase extends AWSTestBase {
      */
     @After
     public void baseTearDown() {
-        List<FailedBatch> failedBatches = dynamoMapper.batchDelete(dynamoMapper.scan(DynamoSessionItem.class,
-                new DynamoDBScanExpression()));
+        List<FailedBatch> failedBatches = dynamoMapper
+                .batchDelete(dynamoMapper.scan(DynamoSessionItem.class, new DynamoDBScanExpression()));
         // If we for some reason couldn't delete all items bail out so we don't affect other tests
         assertThat(failedBatches, empty());
     }

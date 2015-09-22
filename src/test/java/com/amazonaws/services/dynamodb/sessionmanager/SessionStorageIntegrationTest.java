@@ -35,8 +35,8 @@ public class SessionStorageIntegrationTest extends SessionStorageIntegrationTest
 
     @Before
     public void setup() throws Exception {
-        sessionStorage = createSessionStorage(SessionConverter.createDefaultSessionConverter(
-                SESSION_FACTORY.getManager(), getClass().getClassLoader()));
+        sessionStorage = createSessionStorage(SessionConverter
+                .createDefaultSessionConverter(SESSION_FACTORY.getManager(), getClass().getClassLoader()));
     }
 
     @Test

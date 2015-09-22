@@ -37,8 +37,9 @@ public class DynamoUtils {
         request.withKeySchema(new KeySchemaElement().withAttributeName(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME)
                 .withKeyType(KeyType.HASH));
 
-        request.withAttributeDefinitions(new AttributeDefinition().withAttributeName(
-                DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME).withAttributeType(ScalarAttributeType.S));
+        request.withAttributeDefinitions(
+                new AttributeDefinition().withAttributeName(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME)
+                        .withAttributeType(ScalarAttributeType.S));
 
         request.setProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readCapacityUnits)
                 .withWriteCapacityUnits(writeCapacityUnits));

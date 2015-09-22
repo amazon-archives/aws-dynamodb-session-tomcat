@@ -16,11 +16,15 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.catalina.Context;
@@ -34,16 +38,25 @@ import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.test.AWSTestBase;
+import com.amazonaws.util.ImmutableMapParameter;
 
 public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
 
-    private String sessionTableName;
+    private static final String SESSION_ID = "1234";
+    private static final int MAX_IDLE_BACKUP_SECONDS = 1;
+    private static final String ATTR_NAME = "someAttr";
+
     private static AmazonDynamoDBClient dynamo;
     private static Tomcat tomcat;
     private static Context webapp;
+
+    private String sessionTableName;
 
     /** Starts up an embedded Tomcat process for testing. */
     @BeforeClass
@@ -107,6 +120,83 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
     }
 
     /**
+     * Tests the roundtrip journey of a session from memory to Dynamo and back to memory.
+     */
+    @Test
+    public void sessionSwappedOutToDynamo_IsUnchangedWhenSwappedBackIn() throws Exception {
+        final String attrValue = "SOME_VALUE";
+
+        TestDynamoDBSessionManager sessionManager = new TestDynamoDBSessionManager();
+        sessionManager.setDeleteCorruptSessions(true);
+        // MaxIdleSwap needs to be set too as we want it completely out of memory before loading
+        sessionManager.setMaxIdleBackup(MAX_IDLE_BACKUP_SECONDS);
+        sessionManager.setMaxIdleSwap(MAX_IDLE_BACKUP_SECONDS);
+        configureWithExplicitCredentials(sessionManager);
+
+        Session originalSession = sessionManager.createSession(SESSION_ID);
+        final long originalCreationTime = originalSession.getCreationTime();
+        originalSession.getSession().setAttribute(ATTR_NAME, attrValue);
+
+        // Make sure it's out of Tomcat's in memory store and persisted to Dynamo
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(MAX_IDLE_BACKUP_SECONDS + 1, TimeUnit.SECONDS));
+        sessionManager.reallyProcessExpires();
+
+        // Force session manager to load back in non-expired sessions into memory and validate
+        // nothing important has changed
+        sessionManager.load();
+        assertEquals(attrValue, sessionManager.getSession(SESSION_ID).get(ATTR_NAME));
+        assertEquals(originalCreationTime, sessionManager.getCreationTimestamp(SESSION_ID));
+    }
+
+    @Test
+    public void deleteCorruptSessionsEnabled_DeletesNonSerializableSessions() throws InterruptedException {
+        GetItemResult result = saveAndTamperWithSession(true);
+        assertNull(result.getItem());
+    }
+
+    @Test
+    public void deleteCorruptSessionsDisabled_DoesNotDeleteNonSerializableSessions() throws InterruptedException {
+        GetItemResult result = saveAndTamperWithSession(false);
+        assertNotNull(result.getItem());
+    }
+
+    /**
+     * Creates a new Session, makes sure it's backed up in Dynamo, tampers with that session to
+     * corrupt it, forces the session manager to load it back in and then finally returns the
+     * session if it still exists in Dynamo
+     * 
+     * @param deleteCorruptSessions
+     *            Whether to configure the session manager to delete corrupt sessions or not
+     * @return DynamoDB record after sessions have been loaded back in, if it exists. If
+     *         deleteCorruptSessions is true this 'should' return null, if deleteCorruptSessions is
+     *         false this 'should' return a non null item.
+     * @throws InterruptedException
+     */
+    private GetItemResult saveAndTamperWithSession(boolean deleteCorruptSessions) throws InterruptedException {
+        TestDynamoDBSessionManager sessionManager = new TestDynamoDBSessionManager();
+        sessionManager.setDeleteCorruptSessions(deleteCorruptSessions);
+        sessionManager.setMaxIdleBackup(MAX_IDLE_BACKUP_SECONDS);
+        configureWithExplicitCredentials(sessionManager);
+        sessionManager.createSession(SESSION_ID);
+
+        // Make sure it's persisted to Dynamo first before corrupting
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(MAX_IDLE_BACKUP_SECONDS + 1, TimeUnit.SECONDS));
+        sessionManager.reallyProcessExpires();
+
+        // Corrupt the session persisted in Dynamo
+        Map<String, AttributeValue> attributes = ImmutableMapParameter.of(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME,
+                new AttributeValue(SESSION_ID), DynamoSessionItem.SESSION_DATA_ATTRIBUTE_NAME,
+                new AttributeValue().withB(ByteBuffer.wrap(new byte[] { 1, 3, 45, 2, 24, 92 })));
+        dynamo.putItem(new PutItemRequest(sessionTableName, attributes));
+
+        // Force a load of sessions so that corrupt sessions are evaluated by the session store
+        sessionManager.reallyProcessExpires();
+
+        return dynamo.getItem(sessionTableName,
+                ImmutableMapParameter.of(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME, new AttributeValue(SESSION_ID)));
+    }
+
+    /**
      * Bug in the deserialization of sessions was causing persisted sessions loaded via the
      * processExpires method to replace the active session in memory by incorrectly registering it
      * with the manager. This tests makes sure that any sessions loaded by process expires do not
@@ -119,28 +209,25 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
         TestDynamoDBSessionManager sessionManager = new TestDynamoDBSessionManager();
         configureWithExplicitCredentials(sessionManager);
 
-        final String sessionId = "1234";
-        final int maxIdleBackupSeconds = 5;
-        final String attrName = "someAttr";
         final String originalAttrValue = "1";
         final String newAttrValue = "2";
 
         // Create a session and idle it so it's persisted to Dynamo
-        sessionManager.setMaxIdleBackup(maxIdleBackupSeconds);
-        Session newSession = sessionManager.createSession(sessionId);
-        setSessionAttribute(newSession, attrName, originalAttrValue);
-        Thread.sleep(TimeUnit.MILLISECONDS.convert(maxIdleBackupSeconds + 1, TimeUnit.SECONDS));
+        sessionManager.setMaxIdleBackup(MAX_IDLE_BACKUP_SECONDS);
+        Session newSession = sessionManager.createSession(SESSION_ID);
+        setSessionAttribute(newSession, ATTR_NAME, originalAttrValue);
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(MAX_IDLE_BACKUP_SECONDS + 1, TimeUnit.SECONDS));
         // Force session manager to persist sessions that have idled
         sessionManager.reallyProcessExpires();
 
         // Set a new value for the attribute that will only exist in memory
-        setSessionAttribute(newSession, attrName, newAttrValue);
+        setSessionAttribute(newSession, ATTR_NAME, newAttrValue);
         // Force session manager to load in persisted sessions to prune them if expired
         sessionManager.reallyProcessExpires();
 
         // The active session in memory should not be affected by the sessions loaded during
         // processExpires
-        assertEquals(newAttrValue, sessionManager.getSessionAttribute(sessionId, attrName));
+        assertEquals(newAttrValue, sessionManager.getSessionAttribute(SESSION_ID, ATTR_NAME));
     }
 
     private void configureWithExplicitCredentials(DynamoDBSessionManager sessionManager) {
@@ -187,4 +274,5 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
             super.processExpires();
         }
     }
+
 }
