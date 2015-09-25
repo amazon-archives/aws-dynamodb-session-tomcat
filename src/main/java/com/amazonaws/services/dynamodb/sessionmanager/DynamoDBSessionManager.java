@@ -45,9 +45,9 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
-    private static final String USER_AGENT = "DynamoSessionManager/2.0";
+    private static final String USER_AGENT = "DynamoSessionManager/2.0.1";
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0";
+    private static final String info = name + "/2.0.1";
 
     private String regionId = "us-east-1";
     private String endpoint;
