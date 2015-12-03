@@ -38,6 +38,7 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-dynamodb</artifactId>
             <version>1.10.63</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat</groupId>
