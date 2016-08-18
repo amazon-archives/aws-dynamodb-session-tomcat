@@ -67,9 +67,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     public DynamoDBSessionManager() {
         setSaveOnRestart(true);
 
-        // MaxInactiveInterval controls when sessions are removed from the store
-        setMaxInactiveInterval(60 * 60 * 2); // 2 hours
-
         // MaxIdleBackup controls when sessions are persisted to the store
         setMaxIdleBackup(30); // 30 seconds
     }
@@ -258,7 +255,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
      * The cast is safe as it only makes sense to use a session manager within the context of a
      * webapp, the Tomcat 8 version of getContainer just delegates to getContext. When Tomcat7 is no
      * longer supported this can be changed to getContext
-     * 
+     *
      * @return The context this manager is associated with
      */
     // TODO Inline this method with getManager().getContext() when Tomcat7 is no longer supported
