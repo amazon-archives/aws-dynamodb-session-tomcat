@@ -46,7 +46,6 @@ public class DynamoDBSessionStore extends StoreBase {
         this.deleteCorruptSessions = deleteCorruptSessions;
     }
 
-    @Override
     public String getInfo() {
         return info;
     }

@@ -14,14 +14,6 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager;
 
-import java.io.File;
-
-import org.apache.catalina.Context;
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.session.PersistentManagerBase;
-import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -36,6 +28,13 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.util.StringUtils;
+
+import org.apache.catalina.LifecycleException;
+import org.apache.catalina.session.PersistentManagerBase;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+
+import java.io.File;
 
 /**
  * Tomcat persistent session manager implementation that uses Amazon DynamoDB to store HTTP session
@@ -71,7 +70,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         setMaxIdleBackup(30); // 30 seconds
     }
 
-    @Override
     public String getInfo() {
         return info;
     }
@@ -131,8 +129,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     @Override
     protected void initInternal() throws LifecycleException {
-        this.setDistributable(true);
-
         AmazonDynamoDBClient dynamoClient = createDynamoClient();
         initDynamoTable(dynamoClient);
         DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
@@ -246,26 +242,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     }
 
     private SessionConverter getSessionConverter() {
-        ClassLoader classLoader = getAssociatedContext().getLoader().getClassLoader();
+        ClassLoader classLoader = getContext().getLoader().getClassLoader();
         return SessionConverter.createDefaultSessionConverter(this, classLoader);
     }
 
-    /**
-     * To be compatible with Tomcat7 we have to call the getContainer method rather than getContext.
-     * The cast is safe as it only makes sense to use a session manager within the context of a
-     * webapp, the Tomcat 8 version of getContainer just delegates to getContext. When Tomcat7 is no
-     * longer supported this can be changed to getContext
-     *
-     * @return The context this manager is associated with
-     */
-    // TODO Inline this method with getManager().getContext() when Tomcat7 is no longer supported
-    private Context getAssociatedContext() {
-        try {
-            return (Context) getContainer();
-        } catch (ClassCastException e) {
-            logger.fatal("Unable to cast " + getClass().getName() + " to a Context."
-                    + " DynamoDB SessionManager can only be used with a Context");
-            throw new IllegalStateException(e);
-        }
-    }
 }

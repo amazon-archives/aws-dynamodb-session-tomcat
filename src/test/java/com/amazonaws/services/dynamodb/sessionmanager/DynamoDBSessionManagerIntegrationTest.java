@@ -14,18 +14,11 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
+import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import com.amazonaws.test.AWSTestBase;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.Session;
@@ -36,15 +29,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemResult;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.TableDescription;
-import com.amazonaws.test.AWSTestBase;
-import com.amazonaws.util.ImmutableMapParameter;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
 
@@ -148,61 +140,13 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
         assertEquals(originalCreationTime, sessionManager.getCreationTimestamp(SESSION_ID));
     }
 
-    @Test
-    public void deleteCorruptSessionsEnabled_DeletesNonSerializableSessions() throws InterruptedException {
-        GetItemResult result = saveAndTamperWithSession(true);
-        assertNull(result.getItem());
-    }
-
-    @Test
-    public void deleteCorruptSessionsDisabled_DoesNotDeleteNonSerializableSessions() throws InterruptedException {
-        GetItemResult result = saveAndTamperWithSession(false);
-        assertNotNull(result.getItem());
-    }
-
-    /**
-     * Creates a new Session, makes sure it's backed up in Dynamo, tampers with that session to
-     * corrupt it, forces the session manager to load it back in and then finally returns the
-     * session if it still exists in Dynamo
-     * 
-     * @param deleteCorruptSessions
-     *            Whether to configure the session manager to delete corrupt sessions or not
-     * @return DynamoDB record after sessions have been loaded back in, if it exists. If
-     *         deleteCorruptSessions is true this 'should' return null, if deleteCorruptSessions is
-     *         false this 'should' return a non null item.
-     * @throws InterruptedException
-     */
-    private GetItemResult saveAndTamperWithSession(boolean deleteCorruptSessions) throws InterruptedException {
-        TestDynamoDBSessionManager sessionManager = new TestDynamoDBSessionManager();
-        sessionManager.setDeleteCorruptSessions(deleteCorruptSessions);
-        sessionManager.setMaxIdleBackup(MAX_IDLE_BACKUP_SECONDS);
-        configureWithExplicitCredentials(sessionManager);
-        sessionManager.createSession(SESSION_ID);
-
-        // Make sure it's persisted to Dynamo first before corrupting
-        Thread.sleep(TimeUnit.MILLISECONDS.convert(MAX_IDLE_BACKUP_SECONDS + 1, TimeUnit.SECONDS));
-        sessionManager.reallyProcessExpires();
-
-        // Corrupt the session persisted in Dynamo
-        Map<String, AttributeValue> attributes = ImmutableMapParameter.of(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME,
-                new AttributeValue(SESSION_ID), DynamoSessionItem.SESSION_DATA_ATTRIBUTE_NAME,
-                new AttributeValue().withB(ByteBuffer.wrap(new byte[] { 1, 3, 45, 2, 24, 92 })));
-        dynamo.putItem(new PutItemRequest(sessionTableName, attributes));
-
-        // Force a load of sessions so that corrupt sessions are evaluated by the session store
-        sessionManager.reallyProcessExpires();
-
-        return dynamo.getItem(sessionTableName,
-                ImmutableMapParameter.of(DynamoSessionItem.SESSION_ID_ATTRIBUTE_NAME, new AttributeValue(SESSION_ID)));
-    }
-
     /**
      * Bug in the deserialization of sessions was causing persisted sessions loaded via the
      * processExpires method to replace the active session in memory by incorrectly registering it
      * with the manager. This tests makes sure that any sessions loaded by process expires do not
      * affect the attributes of active sessions.
      *
-     * @see https://github.com.aws/aws-dynamodb-session-tomcat/pull/19
+     * @see <a href="https://github.com.aws/aws-dynamodb-session-tomcat/pull/19">PR #19</a>
      */
     @Test
     public void swappedOutSessionsDoNotReplaceActiveSessionDuringProcessExpires() throws InterruptedException {
