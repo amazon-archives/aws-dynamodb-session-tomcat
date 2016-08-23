@@ -127,7 +127,7 @@ public class TestSessionFactory {
 
     private static Manager getDefaultManager() {
         Manager mockManager = mock(Manager.class, RETURNS_DEEP_STUBS);
-        when(mockManager.getContainer().getLogger().isDebugEnabled()).thenReturn(false);
+        when(mockManager.getContext().getLogger().isDebugEnabled()).thenReturn(false);
         return mockManager;
     }
 

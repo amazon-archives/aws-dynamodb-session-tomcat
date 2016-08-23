@@ -43,7 +43,7 @@
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-catalina</artifactId>
-            <version>7.0.64</version>
+            <version>8.5.4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -73,13 +73,13 @@
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-core</artifactId>
-            <version>7.0.64</version>
+            <version>8.5.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-jasper</artifactId>
-            <version>7.0.64</version>
+            <version>8.5.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -191,7 +191,7 @@
             </plugin>
         </plugins>
     </build>
-
+<!--
     <profiles>
         <profile>
             <id>publishing</id>
@@ -227,5 +227,5 @@
             </build>
         </profile>
     </profiles>
-
+-->
 </project>
