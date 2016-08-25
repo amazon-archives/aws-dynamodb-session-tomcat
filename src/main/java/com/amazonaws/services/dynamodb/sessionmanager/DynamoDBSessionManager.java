@@ -71,7 +71,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         setMaxIdleBackup(30); // 30 seconds
     }
 
-    @Override
     public String getInfo() {
         return info;
     }
@@ -131,7 +130,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     @Override
     protected void initInternal() throws LifecycleException {
-        this.setDistributable(true);
+        getContext().setDistributable(true);
 
         AmazonDynamoDBClient dynamoClient = createDynamoClient();
         initDynamoTable(dynamoClient);
@@ -261,7 +260,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     // TODO Inline this method with getManager().getContext() when Tomcat7 is no longer supported
     private Context getAssociatedContext() {
         try {
-            return (Context) getContainer();
+            return getContext();
         } catch (ClassCastException e) {
             logger.fatal("Unable to cast " + getClass().getName() + " to a Context."
                     + " DynamoDB SessionManager can only be used with a Context");
