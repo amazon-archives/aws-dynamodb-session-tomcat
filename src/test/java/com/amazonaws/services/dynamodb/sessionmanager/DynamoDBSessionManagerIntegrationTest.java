@@ -146,7 +146,7 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
      * with the manager. This tests makes sure that any sessions loaded by process expires do not
      * affect the attributes of active sessions.
      *
-     * @see <a href="https://github.com.aws/aws-dynamodb-session-tomcat/pull/19">PR #19</a>
+     * @see <a href="https://github.com/aws/aws-dynamodb-session-tomcat/pull/19">PR #19</a>
      */
     @Test
     public void swappedOutSessionsDoNotReplaceActiveSessionDuringProcessExpires() throws InterruptedException {
