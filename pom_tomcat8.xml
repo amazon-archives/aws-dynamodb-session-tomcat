@@ -43,7 +43,7 @@
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-catalina</artifactId>
-            <version>7.0.59</version>
+            <version>8.0.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -92,12 +92,6 @@
                     <include>LICENSE.txt</include>
                     <include>NOTICE.txt</include>
                     <include>README.md</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>${basedir}/src/main/resources</directory>
-                <includes>
-                    <include>**/*.properties</include>
                 </includes>
             </resource>
         </resources>

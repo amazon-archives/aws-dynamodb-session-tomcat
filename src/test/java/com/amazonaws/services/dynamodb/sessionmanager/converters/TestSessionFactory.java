@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.catalina.Container;
+import org.apache.catalina.Context;
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
@@ -127,7 +129,9 @@ public class TestSessionFactory {
 
     private static Manager getDefaultManager() {
         Manager mockManager = mock(Manager.class, RETURNS_DEEP_STUBS);
-        when(mockManager.getContext().getLogger().isDebugEnabled()).thenReturn(false);
+
+
+        when(((Container)mockManager.getContainer()).getLogger().isDebugEnabled()).thenReturn(false);
         return mockManager;
     }
 

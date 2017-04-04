@@ -25,9 +25,11 @@ public class DynamoSessionItem {
 
     public static final String SESSION_ID_ATTRIBUTE_NAME = "sessionId";
     public static final String SESSION_DATA_ATTRIBUTE_NAME = "sessionData";
+    public static final String TIME_TO_LIVE_ATTRIBUTE_NAME = "ttl";
 
     private String sessionId;
     private ByteBuffer sessionData;
+    private Long ttl;
 
     public DynamoSessionItem() {
     }
@@ -54,4 +56,10 @@ public class DynamoSessionItem {
         this.sessionData = sessionData;
     }
 
+    @DynamoDBAttribute(attributeName = TIME_TO_LIVE_ATTRIBUTE_NAME)
+    public Long getTtl() { return ttl; }
+
+    public void setTtl(Long ttl) {
+        this.ttl = ttl;
+    }
 }

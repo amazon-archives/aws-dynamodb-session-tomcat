@@ -24,10 +24,13 @@ import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
+import com.amazonaws.services.dynamodb.sessionmanager.util.TomcatUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.util.StringUtils;
+
+import org.apache.catalina.Context;
 
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.session.PersistentManagerBase;
@@ -35,6 +38,8 @@ import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 import java.io.File;
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  * Tomcat persistent session manager implementation that uses Amazon DynamoDB to store HTTP session
@@ -44,9 +49,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
-    private static final String USER_AGENT = "DynamoSessionManager/2.0.1";
+    public static final String REAPER_PROPERTIES_FILE_NAME = "aws_dynamodb_reaper.properties";
+    public static final String RUN_REAPER_KEY = "aws.dynamodb.run.reaper";
+
+    private static final String USER_AGENT = "DynamoSessionManager/2.0.4";
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0.1";
+    private static final String info = name + "/2.0.4";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -133,7 +141,13 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         initDynamoTable(dynamoClient);
         DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
         setStore(new DynamoDBSessionStore(sessionStorage, deleteCorruptSessions));
-        new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
+
+        if (runReaper()) {
+            new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
+        }
+        else {
+            logger.info("ExpiredSessionReaperExecutor not initialized.");
+        }
     }
 
     private AmazonDynamoDBClient createDynamoClient() {
@@ -242,8 +256,48 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     }
 
     private SessionConverter getSessionConverter() {
-        ClassLoader classLoader = getContext().getLoader().getClassLoader();
+        ClassLoader classLoader = this.getContext().getLoader().getClassLoader();
         return SessionConverter.createDefaultSessionConverter(this, classLoader);
     }
 
+    protected boolean runReaper() throws IllegalStateException {
+        return runReaper(REAPER_PROPERTIES_FILE_NAME);
+    }
+
+    protected boolean runReaper(final String fileName) throws IllegalStateException {
+        boolean rval = Boolean.TRUE;
+
+        try {
+            Properties properties = getReaperProperties(fileName);
+
+            String runReaper = properties.getProperty(RUN_REAPER_KEY, Boolean.TRUE.toString());
+            rval = Boolean.parseBoolean(runReaper);
+        }
+        catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+
+        return rval;
+    }
+
+    protected Properties getReaperProperties(final String fileName) {
+        Properties properties = new Properties();
+
+        try {
+            ClassLoader classLoader = this.getClass().getClassLoader();
+            InputStream input = classLoader.getResourceAsStream(fileName);
+
+            properties.load(input);
+        }
+        catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+
+        return properties;
+    }
+
+
+    public Context getContext() {
+        return TomcatUtils.getContext(this);
+    }
 }
