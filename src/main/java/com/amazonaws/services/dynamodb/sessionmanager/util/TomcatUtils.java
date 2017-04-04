@@ -19,25 +19,30 @@ public class TomcatUtils {
     public static Context getContext(PersistentManagerBase manager) {
         Context rval = null;
 
-        Method[] methods = manager.getClass().getMethods();
-        for (Method method : methods) {
-            if (method.getName().equals(TOMCAT_V7) || method.getName().equals(TOMCAT_V8)) {
-                rval = invokeMethod(manager, method);
-                break;
+        Method method = null;
+        try {
+            method = manager.getClass().getMethod(TOMCAT_V8);
+        }
+        catch (Throwable t) {
+            try {
+                method = manager.getClass().getMethod(TOMCAT_V7);
+            }
+            catch (Throwable t2) {
+                logger.fatal(t2.getMessage(), t2);
             }
         }
 
-        return rval;
+        return invokeMethod(manager, method);
     }
 
     public static Context invokeMethod(final PersistentManagerBase manager, final Method method) {
         Context rval = null;
 
         try {
-           rval = (Context) method.invoke(manager, new Object[]{null});
+            rval = (Context) method.invoke(manager);
         }
-        catch (Exception e) {
-            logger.fatal("Get Context method[" + method.getName() + "] failed", e);
+        catch (Throwable t) {
+            logger.fatal("Get Context method[" + method.getName() + "] failed", t);
         }
 
         return rval;

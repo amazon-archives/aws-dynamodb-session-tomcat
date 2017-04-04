@@ -6,8 +6,8 @@
     <artifactId>aws-dynamodb-session-tomcat</artifactId>
     <packaging>jar</packaging>
     <name>Amazon DynamoDB Session Manager for Tomcat</name>
-    <version>2.0.4</version>
-    <description>The Amazon DynamoDB Session Manager for Tomcat provides a custom session manager for Tomcat 7 that stores session data in Amazon DynamoDB, Amazon's fully managed NoSQL database service.</description>
+    <version>2.0.5</version>
+    <description>The Amazon DynamoDB Session Manager for Tomcat provides a custom session manager for Tomcat that stores session data in Amazon DynamoDB, Amazon's fully managed NoSQL database service.</description>
     <url>https://aws.amazon.com/java</url>
 
     <scm>
@@ -41,12 +41,6 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.apache.tomcat</groupId>
-            <artifactId>tomcat-catalina</artifactId>
-            <version>7.0.59</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>1.10.19</version>
@@ -71,15 +65,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-catalina</artifactId>
+            <version>${org.apache.tomcat.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-core</artifactId>
-            <version>8.0.1</version>
+            <version>${org.apache.tomcat.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-jasper</artifactId>
-            <version>8.0.1</version>
+            <version>${org.apache.tomcat.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -92,12 +92,6 @@
                     <include>LICENSE.txt</include>
                     <include>NOTICE.txt</include>
                     <include>README.md</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>${basedir}/src/main/resources</directory>
-                <includes>
-                    <include>**/*.properties</include>
                 </includes>
             </resource>
         </resources>
@@ -201,7 +195,6 @@
     <profiles>
         <profile>
             <id>publishing</id>
-
             <build>
                 <plugins>
                     <plugin>
@@ -230,6 +223,23 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <profile>
+            <id>tomcat7</id>
+            <properties>
+                <org.apache.tomcat.version>7.0.59</org.apache.tomcat.version>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>tomcat8</id>
+            <properties>
+                <org.apache.tomcat.version>8.0.1</org.apache.tomcat.version>
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
         </profile>
     </profiles>
 

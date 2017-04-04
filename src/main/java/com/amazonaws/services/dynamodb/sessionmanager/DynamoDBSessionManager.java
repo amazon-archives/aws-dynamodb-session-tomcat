@@ -46,15 +46,16 @@ import java.util.Properties;
  * data.
  */
 public class DynamoDBSessionManager extends PersistentManagerBase {
+    private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
 
     public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
     public static final String REAPER_PROPERTIES_FILE_NAME = "aws_dynamodb_reaper.properties";
     public static final String RUN_REAPER_KEY = "aws.dynamodb.run.reaper";
 
-    private static final String USER_AGENT = "DynamoSessionManager/2.0.4";
+    private static final String USER_AGENT = "DynamoSessionManager/2.0.5";
     private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0.4";
+    private static final String info = name + "/2.0.5";
 
     private String regionId = "us-east-1";
     private String endpoint;
@@ -69,7 +70,8 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     private Integer proxyPort;
     private boolean deleteCorruptSessions = false;
 
-    private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
+    // This makes sure the TomcatUtils is only used once.
+    private Context appContext;
 
     public DynamoDBSessionManager() {
         setSaveOnRestart(true);
@@ -256,7 +258,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     }
 
     private SessionConverter getSessionConverter() {
-        ClassLoader classLoader = this.getContext().getLoader().getClassLoader();
+        ClassLoader classLoader = this.getAppContext().getLoader().getClassLoader();
         return SessionConverter.createDefaultSessionConverter(this, classLoader);
     }
 
@@ -297,7 +299,10 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     }
 
 
-    public Context getContext() {
-        return TomcatUtils.getContext(this);
+    public Context getAppContext() {
+        if (appContext == null)
+            appContext = TomcatUtils.getContext(this);
+
+        return appContext;
     }
 }
