@@ -106,7 +106,7 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
 
         DynamoDBSessionManager sessionManager = new DynamoDBSessionManager();
         sessionManager.setAwsCredentialsFile(System.getProperty("user.home") + "/.aws/awsTestAccount.properties");
-        sessionManager.setTableName(sessionTableName);
+        sessionManager.setTable(sessionTableName);
         webapp.setManager(sessionManager);
 
         assertTrue(doesTableExist(sessionTableName));
@@ -179,7 +179,7 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
     private void configureWithExplicitCredentials(DynamoDBSessionManager sessionManager) {
         sessionManager.setAwsAccessKey(credentials.getAWSAccessKeyId());
         sessionManager.setAwsSecretKey(credentials.getAWSSecretKey());
-        sessionManager.setTableName(sessionTableName);
+        sessionManager.setTable(sessionTableName);
         webapp.setManager(sessionManager);
     }
 

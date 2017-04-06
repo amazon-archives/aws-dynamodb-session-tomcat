@@ -101,7 +101,7 @@ public class TomcatIntegrationTest extends AWSIntegrationTestBase {
     public void testGetContextFromTomcat() throws Exception {
         DynamoDBSessionManager sessionManager = new DynamoDBSessionManager();
         sessionManager.setAwsCredentialsFile(System.getProperty("user.home") + "/.aws/awsTestAccount.properties");
-        sessionManager.setTableName(sessionTableName);
+        sessionManager.setName(sessionTableName);
 
         webapp.setManager(sessionManager);
 
