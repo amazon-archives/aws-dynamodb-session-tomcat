@@ -42,7 +42,7 @@ public class TomcatUtils {
             rval = (Context) method.invoke(manager);
         }
         catch (Throwable t) {
-            logger.fatal("Get Context method[" + method.getName() + "] failed", t);
+            logger.fatal("Get Context method '" + method.getName() + "' failed.", t);
         }
 
         return rval;

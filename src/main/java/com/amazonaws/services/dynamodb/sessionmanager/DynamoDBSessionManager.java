@@ -23,6 +23,7 @@ import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.util.ConfigUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.util.TomcatUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -38,8 +39,6 @@ import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 import java.io.File;
-import java.io.InputStream;
-import java.util.Properties;
 
 /**
  * Tomcat persistent session manager implementation that uses Amazon DynamoDB to store HTTP session
@@ -48,120 +47,96 @@ import java.util.Properties;
 public class DynamoDBSessionManager extends PersistentManagerBase {
     private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
 
-    public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
+    private final String version;
+    private final String userAgent;
+    private final String name;
+    private final String regionId;
 
-    public static final String REAPER_PROPERTIES_FILE_NAME = "aws_dynamodb_reaper.properties";
-    public static final String RUN_REAPER_KEY = "aws.dynamodb.run.reaper";
+    private final boolean deleteCorruptSessions;
+    private final boolean createIfNotExist;
+    private final boolean disableReaper;
 
-    private static final String USER_AGENT = "DynamoSessionManager/2.0.5";
-    private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0.5";
+    private final long readCapacityUnits;
+    private final long writeCapacityUnits;
 
-    private String regionId = "us-east-1";
-    private String endpoint;
     private File credentialsFile;
     private String accessKey;
     private String secretKey;
-    private long readCapacityUnits = 10;
-    private long writeCapacityUnits = 5;
-    private boolean createIfNotExist = true;
-    private String tableName = DEFAULT_TABLE_NAME;
-    private String proxyHost;
-    private Integer proxyPort;
-    private boolean deleteCorruptSessions = false;
+    private String tableName;
+
+    private String proxyHost;    // This is not set, ever...
+    private Integer proxyPort;   // This is not set, ever...
 
     // This makes sure the TomcatUtils is only used once.
     private Context appContext;
 
     public DynamoDBSessionManager() {
-        setSaveOnRestart(true);
+        setSaveOnRestart(ConfigUtils.getBoolean(ConfigUtils.SAVE_ON_RESTART, true));
 
         // MaxIdleBackup controls when sessions are persisted to the store
-        setMaxIdleBackup(30); // 30 seconds
-    }
+        setMaxIdleBackup(ConfigUtils.getInt(ConfigUtils.MAX_IDLE_BACKUP, 30));
 
-    public String getInfo() {
-        return info;
+        // Table name is a constant because of the Table Annotation in DynamoSessionItem
+        this.tableName = ConfigUtils.DEFAULT_TABLE_NAME;
+
+        this.version = ConfigUtils.getString(ConfigUtils.VERSION);
+        this.userAgent = ConfigUtils.getString(ConfigUtils.USER_AGENT) + "/" + this.version;
+        this.name = ConfigUtils.getString(ConfigUtils.NAME) + "/" + this.version;
+        this.regionId = ConfigUtils.getString(ConfigUtils.REGION_ID, "us-east-1");
+
+        this.deleteCorruptSessions = ConfigUtils.getBoolean(ConfigUtils.DELETE_CORRUPTED_SESSIONS, Boolean.TRUE);
+        this.createIfNotExist = ConfigUtils.getBoolean(ConfigUtils.CREATE_IF_NOT_EXIST, Boolean.TRUE);
+        this.disableReaper = ConfigUtils.getBoolean(ConfigUtils.DISABLE_REAPER, Boolean.FALSE);
+
+        this.readCapacityUnits = ConfigUtils.getLong(ConfigUtils.READ_CAPACITY_UNITS, 10);
+        this.writeCapacityUnits = ConfigUtils.getLong(ConfigUtils.WRITE_CAPACITY_UNITS, 5);
     }
 
     @Override
     public String getName() {
-        return name;
+        return this.name;
     }
 
-    public void setRegionId(String regionId) {
-        this.regionId = regionId;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
-
+    public void setTableName(final String tableName) { this.tableName = tableName; }
     public void setAwsAccessKey(String accessKey) {
         this.accessKey = accessKey;
     }
-
     public void setAwsSecretKey(String secretKey) {
         this.secretKey = secretKey;
     }
-
     public void setAwsCredentialsFile(String credentialsFile) {
         this.credentialsFile = new File(credentialsFile);
     }
 
-    public void setTable(String table) {
-        this.tableName = table;
-    }
-
-    public void setReadCapacityUnits(int readCapacityUnits) {
-        this.readCapacityUnits = readCapacityUnits;
-    }
-
-    public void setWriteCapacityUnits(int writeCapacityUnits) {
-        this.writeCapacityUnits = writeCapacityUnits;
-    }
-
-    public void setCreateIfNotExist(boolean createIfNotExist) {
-        this.createIfNotExist = createIfNotExist;
-    }
-
-    public void setProxyHost(String proxyHost) {
-        this.proxyHost = proxyHost;
-    }
-
-    public void setProxyPort(Integer proxyPort) {
-        this.proxyPort = proxyPort;
-    }
-
-    public void setDeleteCorruptSessions(boolean deleteCorruptSessions) {
-        this.deleteCorruptSessions = deleteCorruptSessions;
-    }
 
     @Override
     protected void initInternal() throws LifecycleException {
         AmazonDynamoDBClient dynamoClient = createDynamoClient();
         initDynamoTable(dynamoClient);
-        DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
-        setStore(new DynamoDBSessionStore(sessionStorage, deleteCorruptSessions));
 
-        if (runReaper()) {
-            new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
+        DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
+        DynamoDBSessionStore store = new DynamoDBSessionStore(sessionStorage, this.name,
+                this.deleteCorruptSessions);
+
+        setStore(store);
+
+        if (this.disableReaper) {
+            logger.info("ExpiredSessionReaperExecutor has been disabled.");
         }
         else {
-            logger.info("ExpiredSessionReaperExecutor not initialized.");
+            new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
         }
     }
 
     private AmazonDynamoDBClient createDynamoClient() {
         AWSCredentialsProvider credentialsProvider = initCredentials();
         ClientConfiguration clientConfiguration = initClientConfiguration();
+
         AmazonDynamoDBClient dynamoClient = new AmazonDynamoDBClient(credentialsProvider, clientConfiguration);
         if (this.regionId != null) {
             dynamoClient.setRegion(RegionUtils.getRegion(this.regionId));
         }
-        if (this.endpoint != null) {
-            dynamoClient.setEndpoint(this.endpoint);
-        }
+
         return dynamoClient;
     }
 
@@ -221,17 +196,16 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     private ClientConfiguration initClientConfiguration() {
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        clientConfiguration.setUserAgent(USER_AGENT);
+        clientConfiguration.setUserAgent(this.userAgent);
 
         // Attempt to use an explicit proxy configuration
-        if (proxyHost != null || proxyPort != null) {
-            logger.debug("Reading proxy settings from context.xml");
-            if (proxyHost == null || proxyPort == null) {
-                throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
-                        + " Both proxy hot and proxy port needs to be specified");
-            }
+        if (proxyHost != null && proxyPort != null) {
             logger.debug("Using proxy host and port from context.xml");
             clientConfiguration.withProxyHost(proxyHost).withProxyPort(proxyPort);
+        }
+        else if (proxyHost != null || proxyPort != null) {
+            throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
+                    + " Both proxy hot and proxy port needs to be specified");
         }
 
         return clientConfiguration;
@@ -262,43 +236,10 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         return SessionConverter.createDefaultSessionConverter(this, classLoader);
     }
 
-    protected boolean runReaper() throws IllegalStateException {
-        return runReaper(REAPER_PROPERTIES_FILE_NAME);
-    }
 
-    protected boolean runReaper(final String fileName) throws IllegalStateException {
-        boolean rval = Boolean.TRUE;
-
-        try {
-            Properties properties = getReaperProperties(fileName);
-
-            String runReaper = properties.getProperty(RUN_REAPER_KEY, Boolean.TRUE.toString());
-            rval = Boolean.parseBoolean(runReaper);
-        }
-        catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-
-        return rval;
-    }
-
-    protected Properties getReaperProperties(final String fileName) {
-        Properties properties = new Properties();
-
-        try {
-            ClassLoader classLoader = this.getClass().getClassLoader();
-            InputStream input = classLoader.getResourceAsStream(fileName);
-
-            properties.load(input);
-        }
-        catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-
-        return properties;
-    }
-
-
+    /*
+    ** This allows for the code base to work with Tomcat 7 and 8.
+    */
     public Context getAppContext() {
         if (appContext == null)
             appContext = TomcatUtils.getContext(this);

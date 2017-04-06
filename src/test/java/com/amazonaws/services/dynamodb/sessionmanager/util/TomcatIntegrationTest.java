@@ -14,15 +14,10 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager.util;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodb.sessionmanager.DynamoDBSessionManager;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
-import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.test.AWSIntegrationTestBase;
-import com.amazonaws.test.AWSTestBase;
 import org.apache.catalina.Context;
-import org.apache.catalina.Session;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
@@ -31,7 +26,6 @@ import org.junit.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -44,7 +38,7 @@ import static org.junit.Assert.*;
 ** You can test different tomcat versions by using different profiles.
 **    tomcat7 and tomcat8 are currently set; where tomcat8 is default.
 **
-** To run on tomcat 7
+** To run on tomcat 7 or configure your IDE for maven profiles
 **    mvn clean package -Dtest=TomcatIntegrationTest -Ptomcat7
 **
 */
@@ -52,7 +46,6 @@ public class TomcatIntegrationTest extends AWSIntegrationTestBase {
     private static final Log logger = LogFactory.getLog(TomcatIntegrationTest.class);
 
     private static final String SESSION_ID = "1234";
-    private static final int MAX_IDLE_BACKUP_SECONDS = 1;
     private static final String ATTR_NAME = "someAttr";
 
     private static AmazonDynamoDBClient dynamo;
@@ -93,7 +86,7 @@ public class TomcatIntegrationTest extends AWSIntegrationTestBase {
             dynamo.deleteTable(sessionTableName);
         }
         catch (Exception e) {
-            logger.warn("Unable to delete table[" + sessionTableName + "]");
+            logger.warn("Unable to delete table '" + sessionTableName + "'");
         }
     }
 
@@ -108,7 +101,7 @@ public class TomcatIntegrationTest extends AWSIntegrationTestBase {
     public void testGetContextFromTomcat() throws Exception {
         DynamoDBSessionManager sessionManager = new DynamoDBSessionManager();
         sessionManager.setAwsCredentialsFile(System.getProperty("user.home") + "/.aws/awsTestAccount.properties");
-        sessionManager.setTable(sessionTableName);
+        sessionManager.setTableName(sessionTableName);
 
         webapp.setManager(sessionManager);
 

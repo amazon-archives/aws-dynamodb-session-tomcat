@@ -31,23 +31,23 @@ import com.amazonaws.services.dynamodb.sessionmanager.util.ValidatorUtils;
  * Session store implementation that loads and stores HTTP sessions from Amazon DynamoDB.
  */
 public class DynamoDBSessionStore extends StoreBase {
-
     private static final Log logger = LogFactory.getLog(DynamoDBSessionStore.class);
-    private static final String name = "AmazonDynamoDBSessionStore";
-    private static final String info = name + "/1.0";
 
     private final Set<String> sessionIds = Collections.synchronizedSet(new HashSet<String>());
     private final DynamoSessionStorage sessionStorage;
+
     private final boolean deleteCorruptSessions;
 
-    public DynamoDBSessionStore(DynamoSessionStorage sessionStorage, boolean deleteCorruptSessions) {
-        ValidatorUtils.nonNull(sessionStorage, "SessionStorage");
-        this.sessionStorage = sessionStorage;
-        this.deleteCorruptSessions = deleteCorruptSessions;
-    }
+    private String name;
 
-    public String getInfo() {
-        return info;
+    public DynamoDBSessionStore(final DynamoSessionStorage sessionStorage, final String name,
+            final boolean deleteCorruptSessions) {
+        ValidatorUtils.nonNull(sessionStorage, "SessionStorage");
+
+        this.sessionStorage = sessionStorage;
+        this.name = name;
+
+        this.deleteCorruptSessions = deleteCorruptSessions;
     }
 
     @Override
@@ -118,15 +118,12 @@ public class DynamoDBSessionStore extends StoreBase {
 
     /**
      * Delete corrupt session from Dynamo if configured to do so.
-     * 
-     * @param id
-     *            ID of session to delete
-     * @param e
-     *            Exception that caused the session to fail to deserialize
+     *
+     * @param id ID of session to delete
+     * @param e  Exception that caused the session to fail to deserialize
      */
     private void deleteCorruptSession(String id, SessionConversionException e) {
         logger.warn("Unable to load session with id " + id + ". Deleting from session store", e);
         sessionStorage.deleteSession(id);
     }
-
 }

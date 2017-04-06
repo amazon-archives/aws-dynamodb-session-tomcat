@@ -12,3 +12,4 @@
 .settings/org.eclipse.m2e.core.prefs
 *.iml
 .idea/
+/dependency-reduced-pom.xml

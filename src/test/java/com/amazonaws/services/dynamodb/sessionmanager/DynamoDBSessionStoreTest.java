@@ -88,7 +88,7 @@ public class DynamoDBSessionStoreTest {
     }
 
     private void buildSessionStore(boolean deleteCorruptSessions) {
-        this.store = new DynamoDBSessionStore(storage, deleteCorruptSessions);
+        this.store = new DynamoDBSessionStore(storage, "tableName", deleteCorruptSessions);
         this.store.setManager(manager);
     }
 }

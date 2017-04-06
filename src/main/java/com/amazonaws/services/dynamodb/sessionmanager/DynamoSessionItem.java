@@ -16,11 +16,12 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import java.nio.ByteBuffer;
 
+import com.amazonaws.services.dynamodb.sessionmanager.util.ConfigUtils;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
-@DynamoDBTable(tableName = DynamoDBSessionManager.DEFAULT_TABLE_NAME)
+@DynamoDBTable(tableName = ConfigUtils.DEFAULT_TABLE_NAME)
 public class DynamoSessionItem {
 
     public static final String SESSION_ID_ATTRIBUTE_NAME = "sessionId";
