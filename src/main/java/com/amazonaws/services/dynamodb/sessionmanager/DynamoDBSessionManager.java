@@ -49,23 +49,24 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     private final String version;
     private final String userAgent;
-    private final String name;
-    private final String regionId;
-
-    private final boolean deleteCorruptSessions;
-    private final boolean createIfNotExist;
     private final boolean disableReaper;
 
-    private final long readCapacityUnits;
-    private final long writeCapacityUnits;
-
     private File credentialsFile;
+
+    private String name;
     private String accessKey;
     private String secretKey;
     private String tableName;
+    private String regionId;
 
-    private String proxyHost;    // This is not set, ever...
-    private Integer proxyPort;   // This is not set, ever...
+    private long readCapacityUnits;
+    private long writeCapacityUnits;
+
+    private boolean createIfNotExist;
+    private boolean deleteCorruptSessions;
+
+    private String proxyHost;
+    private Integer proxyPort;
 
     // This makes sure the TomcatUtils is only used once.
     private Context appContext;
@@ -97,7 +98,18 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         return this.name;
     }
 
-    public void setTableName(final String tableName) { this.tableName = tableName; }
+    // These setters are needed for the Tomcat context.xml to override values
+    public void setName(final String name) { this.name = name; }
+    public void setTable(final String tableName) { this.tableName = tableName; }
+    public void setRegionId(final String regionId) { this.regionId = regionId; }
+    public void setCreateIfNotExist(final boolean createIfNotExist) { this.createIfNotExist = createIfNotExist; }
+    public void setReadCapacityUnits(int readCapacityUnits) { this.readCapacityUnits = readCapacityUnits; }
+    public void setWriteCapacityUnits(int writeCapacityUnits) { this.writeCapacityUnits = writeCapacityUnits; }
+    public void setProxyHost(String proxyHost) { this.proxyHost = proxyHost; }
+    public void setProxyPort(Integer proxyPort) { this.proxyPort = proxyPort; }
+    public void setDeleteCorruptSessions(boolean deleteCorruptSessions) { this.deleteCorruptSessions = deleteCorruptSessions; }
+
+    
     public void setAwsAccessKey(String accessKey) {
         this.accessKey = accessKey;
     }

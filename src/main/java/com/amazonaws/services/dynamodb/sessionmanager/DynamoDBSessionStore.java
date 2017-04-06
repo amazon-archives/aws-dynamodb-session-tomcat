@@ -38,7 +38,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     private final boolean deleteCorruptSessions;
 
-    private String name;
+    private final String name;
 
     public DynamoDBSessionStore(final DynamoSessionStorage sessionStorage, final String name,
             final boolean deleteCorruptSessions) {
