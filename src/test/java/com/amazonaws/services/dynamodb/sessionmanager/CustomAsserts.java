@@ -43,7 +43,7 @@ public class CustomAsserts {
     }
 
     private static <T> SortedSet<T> toSortedSet(Enumeration<T> enumeration) {
-        SortedSet<T> list = new TreeSet<T>();
+        SortedSet<T> list = new TreeSet<>();
         while (enumeration.hasMoreElements()) {
             list.add(enumeration.nextElement());
         }
