@@ -27,7 +27,7 @@ public class ExpiredSessionReaperExecutor {
 
     private static final int REAP_FREQUENCY_HOURS = 12;
     private static final int MAX_JITTER_HOURS = 5;
-    private static final String THREAD_NAME = "dynamo-session-manager-expired-sesion-reaper";
+    private static final String THREAD_NAME = "dynamo-db-session-manager-expired-sesion-reaper";
 
     private final ScheduledThreadPoolExecutor executor;
 

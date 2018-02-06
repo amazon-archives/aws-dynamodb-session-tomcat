@@ -14,8 +14,9 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager.util;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodb.sessionmanager.DynamoSessionItem;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig.TableNameOverride;
@@ -25,10 +26,11 @@ import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
 
 public class DynamoUtils {
 
-    public static void createSessionTable(AmazonDynamoDBClient dynamo,
+    public static void createSessionTable(AmazonDynamoDB dynamo,
                                           String tableName,
                                           long readCapacityUnits,
                                           long writeCapacityUnits) {
@@ -44,14 +46,25 @@ public class DynamoUtils {
         request.setProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readCapacityUnits)
                 .withWriteCapacityUnits(writeCapacityUnits));
 
-        dynamo.createTable(request);
+        boolean created = TableUtils.createTableIfNotExists(dynamo, request);
+
+        if(created)  {
+            try {
+                TableUtils.waitUntilActive(dynamo, tableName);
+            } catch (InterruptedException e) {
+                throw new AmazonClientException(e.getMessage(), e);
+            }
+        }
     }
 
     /**
      * Create a new DynamoDBMapper with table name override
      */
-    public static DynamoDBMapper createDynamoMapper(AmazonDynamoDBClient dynamoDbClient, String tableName) {
-        return new DynamoDBMapper(dynamoDbClient, new DynamoDBMapperConfig(new TableNameOverride(tableName)));
+    public static DynamoDBMapper createDynamoMapper(AmazonDynamoDB dynamoDbClient, String tableName) {
+        final DynamoDBMapperConfig.Builder builder = DynamoDBMapperConfig
+                .builder()
+                .withTableNameOverride(new TableNameOverride(tableName));
+        return new DynamoDBMapper(dynamoDbClient, builder.build());
     }
 
 }

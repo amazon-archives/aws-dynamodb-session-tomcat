@@ -16,17 +16,14 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.auth.PropertiesCredentials;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.auth.*;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.util.StringUtils;
 
 import org.apache.catalina.LifecycleException;
@@ -42,26 +39,30 @@ import java.io.File;
  */
 public class DynamoDBSessionManager extends PersistentManagerBase {
 
+    private static final Log LOGGER = LogFactory.getLog(DynamoDBSessionManager.class);
+
     public static final String DEFAULT_TABLE_NAME = "Tomcat_SessionState";
 
-    private static final String USER_AGENT = "DynamoSessionManager/2.0.1";
-    private static final String name = "AmazonDynamoDBSessionManager";
-    private static final String info = name + "/2.0.1";
+    private static final String AWS_REGION = "us-east-1";
+    private static final String USER_AGENT = "DynamoSessionManager/2.0.5";
+    private static final String NAME = "AmazonDynamoDBSessionManager";
+    private static final String INFO = NAME + "/2.0.5";
 
-    private String regionId = "us-east-1";
+    // aws dynamo behaviors
+    private String tableName = DEFAULT_TABLE_NAME;
+    private String regionId = AWS_REGION;
     private String endpoint;
+    private long readCapacityUnits = 10;
+    private long writeCapacityUnits = 5;
+    private boolean deleteCorruptSessions = false;
+    // aws credentials
     private File credentialsFile;
     private String accessKey;
     private String secretKey;
-    private long readCapacityUnits = 10;
-    private long writeCapacityUnits = 5;
-    private boolean createIfNotExist = true;
-    private String tableName = DEFAULT_TABLE_NAME;
+    // local network config
     private String proxyHost;
     private Integer proxyPort;
-    private boolean deleteCorruptSessions = false;
 
-    private static final Log logger = LogFactory.getLog(DynamoDBSessionManager.class);
 
     public DynamoDBSessionManager() {
         setSaveOnRestart(true);
@@ -71,12 +72,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
     }
 
     public String getInfo() {
-        return info;
+        return INFO;
     }
 
     @Override
     public String getName() {
-        return name;
+        return NAME;
     }
 
     public void setRegionId(String regionId) {
@@ -111,10 +112,6 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         this.writeCapacityUnits = writeCapacityUnits;
     }
 
-    public void setCreateIfNotExist(boolean createIfNotExist) {
-        this.createIfNotExist = createIfNotExist;
-    }
-
     public void setProxyHost(String proxyHost) {
         this.proxyHost = proxyHost;
     }
@@ -129,24 +126,24 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     @Override
     protected void initInternal() throws LifecycleException {
-        AmazonDynamoDBClient dynamoClient = createDynamoClient();
+        AmazonDynamoDB dynamoClient = createDynamoClient();
         initDynamoTable(dynamoClient);
         DynamoSessionStorage sessionStorage = createSessionStorage(dynamoClient);
         setStore(new DynamoDBSessionStore(sessionStorage, deleteCorruptSessions));
         new ExpiredSessionReaperExecutor(new ExpiredSessionReaper(sessionStorage));
     }
 
-    private AmazonDynamoDBClient createDynamoClient() {
-        AWSCredentialsProvider credentialsProvider = initCredentials();
-        ClientConfiguration clientConfiguration = initClientConfiguration();
-        AmazonDynamoDBClient dynamoClient = new AmazonDynamoDBClient(credentialsProvider, clientConfiguration);
-        if (this.regionId != null) {
-            dynamoClient.setRegion(RegionUtils.getRegion(this.regionId));
-        }
+    private AmazonDynamoDB createDynamoClient() {
+        final String region = regionId != null ? regionId : AWS_REGION;
+        final AmazonDynamoDBClientBuilder dynamoClient = AmazonDynamoDBClient
+                .builder()
+                .withCredentials(initCredentials())
+                .withClientConfiguration(initClientConfiguration())
+                .withRegion(region);
         if (this.endpoint != null) {
-            dynamoClient.setEndpoint(this.endpoint);
+            dynamoClient.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region));
         }
-        return dynamoClient;
+        return dynamoClient.build();
     }
 
     private AWSCredentialsProvider initCredentials() {
@@ -156,17 +153,17 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
             if (credentialsInContextConfigAreValid()) {
                 throw new AmazonClientException("Incomplete AWS security credentials specified in context.xml.");
             }
-            logger.debug("Using AWS access key ID and secret key from context.xml");
-            return new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
+            LOGGER.debug("Using AWS access key ID and secret key from context.xml");
+            return new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
         }
 
         // Use any explicitly specified credentials properties file next
         if (credentialsFile != null) {
             try {
-                logger.debug("Reading security credentials from properties file: " + credentialsFile);
+                LOGGER.debug("Reading security credentials from properties file: " + credentialsFile);
                 PropertiesCredentials credentials = new PropertiesCredentials(credentialsFile);
-                logger.debug("Using AWS credentials from file: " + credentialsFile);
-                return new StaticCredentialsProvider(credentials);
+                LOGGER.debug("Using AWS credentials from file: " + credentialsFile);
+                return new AWSStaticCredentialsProvider(credentials);
             } catch (Exception e) {
                 throw new AmazonClientException(
                         "Unable to read AWS security credentials from file specified in context.xml: "
@@ -178,12 +175,12 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         // Fall back to the default credentials chain provider if credentials weren't explicitly set
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
-            logger.debug("Loading security credentials from default credentials provider chain.");
+            LOGGER.debug("Loading security credentials from default credentials provider chain.");
             throw new AmazonClientException("Unable to find AWS security credentials.  "
                     + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
                     + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
         }
-        logger.debug("Using default AWS credentials provider chain to load credentials");
+        LOGGER.debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
     }
 
@@ -205,38 +202,27 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
 
     private ClientConfiguration initClientConfiguration() {
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        clientConfiguration.setUserAgent(USER_AGENT);
+        clientConfiguration.setUserAgentPrefix(USER_AGENT);
 
         // Attempt to use an explicit proxy configuration
         if (proxyHost != null || proxyPort != null) {
-            logger.debug("Reading proxy settings from context.xml");
+            LOGGER.debug("Reading proxy settings from context.xml");
             if (proxyHost == null || proxyPort == null) {
                 throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
                         + " Both proxy hot and proxy port needs to be specified");
             }
-            logger.debug("Using proxy host and port from context.xml");
+            LOGGER.debug("Using proxy host and port from context.xml");
             clientConfiguration.withProxyHost(proxyHost).withProxyPort(proxyPort);
         }
 
         return clientConfiguration;
     }
 
-    private void initDynamoTable(AmazonDynamoDBClient dynamo) {
-        boolean tableExists = Tables.doesTableExist(dynamo, this.tableName);
-
-        if (!tableExists && !createIfNotExist) {
-            throw new AmazonClientException("Session table '" + tableName + "' does not exist, "
-                    + "and automatic table creation has been disabled in context.xml");
-        }
-
-        if (!tableExists) {
-            DynamoUtils.createSessionTable(dynamo, this.tableName, this.readCapacityUnits, this.writeCapacityUnits);
-        }
-
-        Tables.waitForTableToBecomeActive(dynamo, this.tableName);
+    private void initDynamoTable(AmazonDynamoDB dynamo) {
+        DynamoUtils.createSessionTable(dynamo, this.tableName, this.readCapacityUnits, this.writeCapacityUnits);
     }
 
-    private DynamoSessionStorage createSessionStorage(AmazonDynamoDBClient dynamoClient) {
+    private DynamoSessionStorage createSessionStorage(AmazonDynamoDB dynamoClient) {
         DynamoDBMapper dynamoMapper = DynamoUtils.createDynamoMapper(dynamoClient, tableName);
         return new DynamoSessionStorage(dynamoMapper, getSessionConverter());
     }

@@ -34,7 +34,7 @@ public class DynamoDBSessionStore extends StoreBase {
 
     private static final Log logger = LogFactory.getLog(DynamoDBSessionStore.class);
     private static final String name = "AmazonDynamoDBSessionStore";
-    private static final String info = name + "/1.0";
+    private static final String info = name + "/2.0";
 
     private final Set<String> sessionIds = Collections.synchronizedSet(new HashSet<String>());
     private final DynamoSessionStorage sessionStorage;
@@ -58,8 +58,8 @@ public class DynamoDBSessionStore extends StoreBase {
     @Override
     public void clear() throws IOException {
         synchronized (sessionIds) {
-            final Set<String> sessionsToDelete = new HashSet<String>(sessionIds);
-            new Thread("dynamodb-session-manager-clear") {
+            final Set<String> sessionsToDelete = new HashSet<>(sessionIds);
+            new Thread("dynamo-db-session-manager-clear") {
                 @Override
                 public void run() {
                     for (String sessionId : sessionsToDelete) {

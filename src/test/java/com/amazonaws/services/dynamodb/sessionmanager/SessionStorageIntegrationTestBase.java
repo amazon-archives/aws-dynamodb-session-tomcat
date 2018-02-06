@@ -19,35 +19,39 @@ import static org.junit.Assert.assertThat;
 
 import java.util.List;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
+import com.amazonaws.test.AWSIntegrationTestBase;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper.FailedBatch;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
-import com.amazonaws.services.dynamodbv2.util.Tables;
-import com.amazonaws.test.AWSTestBase;
 
 /**
  * Base class for tests interacting directly with DynamoDB. Creates a unique table per test class
  */
-public class SessionStorageIntegrationTestBase extends AWSTestBase {
+public class SessionStorageIntegrationTestBase extends AWSIntegrationTestBase {
 
-    private static AmazonDynamoDBClient dynamoClient;
+    private static AmazonDynamoDB dynamoClient;
     private static DynamoDBMapper dynamoMapper;
     private static String tableName;
 
     @BeforeClass
     public static final void baseSetupFixture() throws Exception {
         setUpCredentials();
-        dynamoClient = new AmazonDynamoDBClient(credentials);
+        dynamoClient = AmazonDynamoDBClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(getCredentials())).withRegion("us-east-1").build();
         tableName = getUniqueTableName();
         DynamoUtils.createSessionTable(dynamoClient, tableName, 10L, 10L);
-        Tables.waitForTableToBecomeActive(dynamoClient, tableName);
         dynamoMapper = DynamoUtils.createDynamoMapper(dynamoClient, tableName);
     }
 
@@ -65,7 +69,7 @@ public class SessionStorageIntegrationTestBase extends AWSTestBase {
 
     @AfterClass
     public static final void baseTearDownFixture() {
-        dynamoClient.deleteTable(tableName);
+        TableUtils.deleteTableIfExists(dynamoClient, new DeleteTableRequest(tableName));
     }
 
     private static String getUniqueTableName() {

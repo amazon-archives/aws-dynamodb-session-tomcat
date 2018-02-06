@@ -120,7 +120,7 @@ public class TestSessionFactory {
     }
 
     private static Map<String, Object> getDefaultSessionAttributes() {
-        Map<String, Object> sessionData = new HashMap<String, Object>();
+        Map<String, Object> sessionData = new HashMap<>();
         sessionData.put("someAttribute", new CustomSessionClass("customData"));
         return sessionData;
     }

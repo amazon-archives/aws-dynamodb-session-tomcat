@@ -15,9 +15,15 @@
 package com.amazonaws.services.dynamodb.sessionmanager;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
 import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
+import com.amazonaws.test.AWSIntegrationTestBase;
 import com.amazonaws.test.AWSTestBase;
 
 import org.apache.catalina.Context;
@@ -38,13 +44,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
+public class DynamoDBSessionManagerIntegrationTest extends AWSIntegrationTestBase {
 
     private static final String SESSION_ID = "1234";
     private static final int MAX_IDLE_BACKUP_SECONDS = 1;
     private static final String ATTR_NAME = "someAttr";
 
-    private static AmazonDynamoDBClient dynamo;
+    private static AmazonDynamoDB dynamo;
     private static Tomcat tomcat;
     private static Context webapp;
 
@@ -54,7 +60,7 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
     @BeforeClass
     public static void setupFixture() throws Exception {
         setUpCredentials();
-        dynamo = new AmazonDynamoDBClient(credentials);
+        dynamo = AmazonDynamoDBClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(getCredentials())).withRegion("us-east-1").build();
 
         String workingDir = System.getProperty("java.io.tmpdir");
         File webappDirectory = Files.createTempDirectory(Paths.get(workingDir), null).toFile();
@@ -78,7 +84,7 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
 
     @After
     public void tearDown() {
-        dynamo.deleteTable(sessionTableName);
+        TableUtils.deleteTableIfExists(dynamo, new DeleteTableRequest(sessionTableName));
     }
 
     @AfterClass
@@ -175,8 +181,8 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
     }
 
     private void configureWithExplicitCredentials(DynamoDBSessionManager sessionManager) {
-        sessionManager.setAwsAccessKey(credentials.getAWSAccessKeyId());
-        sessionManager.setAwsSecretKey(credentials.getAWSSecretKey());
+        sessionManager.setAwsAccessKey(getCredentials().getAWSAccessKeyId());
+        sessionManager.setAwsSecretKey(getCredentials().getAWSSecretKey());
         sessionManager.setTable(sessionTableName);
         webapp.setManager(sessionManager);
     }

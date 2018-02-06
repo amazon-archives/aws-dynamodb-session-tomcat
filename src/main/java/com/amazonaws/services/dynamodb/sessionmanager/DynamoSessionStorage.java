@@ -96,25 +96,25 @@ public class DynamoSessionStorage {
      */
     private class SessionConverterIterator implements Iterator<Session> {
 
-        private final Iterator<DynamoSessionItem> sessionItemterator;
+        private final Iterator<DynamoSessionItem> sessionItemIterator;
 
         private SessionConverterIterator(Iterator<DynamoSessionItem> sessionItemIterator) {
-            this.sessionItemterator = sessionItemIterator;
+            this.sessionItemIterator = sessionItemIterator;
         }
 
         @Override
         public boolean hasNext() {
-            return sessionItemterator.hasNext();
+            return sessionItemIterator.hasNext();
         }
 
         @Override
         public Session next() {
-            return sessionConverter.toSession(sessionItemterator.next());
+            return sessionConverter.toSession(sessionItemIterator.next());
         }
 
         @Override
         public void remove() {
-            sessionItemterator.remove();
+            sessionItemIterator.remove();
         }
 
     }
