@@ -23,6 +23,7 @@ import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.dynamodb.sessionmanager.converters.SessionConverter;
+import com.amazonaws.services.dynamodb.sessionmanager.util.Constants;
 import com.amazonaws.services.dynamodb.sessionmanager.util.DynamoUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
@@ -154,7 +155,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         if (credentialsExistInContextConfig()) {
             // Fail fast if credentials aren't valid as user has likely made a configuration mistake
             if (credentialsInContextConfigAreValid()) {
-                throw new AmazonClientException("Incomplete AWS security credentials specified in context.xml.");
+                throw new AmazonClientException(Constants.INCOMPLETE_AWS_IN_CONTEXT);
             }
             logger.debug("Using AWS access key ID and secret key from context.xml");
             return new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
@@ -168,10 +169,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
                 logger.debug("Using AWS credentials from file: " + credentialsFile);
                 return new StaticCredentialsProvider(credentials);
             } catch (Exception e) {
-                throw new AmazonClientException(
-                        "Unable to read AWS security credentials from file specified in context.xml: "
-                                + credentialsFile,
-                        e);
+                throw new AmazonClientException(Constants.UNABLE_READ_AWS_SECURUTY_CREDENTIALS_IN_CONTEXT + credentialsFile, e);
             }
         }
 
@@ -179,9 +177,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         AWSCredentialsProvider defaultChainProvider = new DefaultAWSCredentialsProviderChain();
         if (defaultChainProvider.getCredentials() == null) {
             logger.debug("Loading security credentials from default credentials provider chain.");
-            throw new AmazonClientException("Unable to find AWS security credentials.  "
-                    + "Searched JVM system properties, OS env vars, and EC2 instance roles.  "
-                    + "Specify credentials in Tomcat's context.xml file or put them in one of the places mentioned above.");
+            throw new AmazonClientException(Constants.UNABLE_FIND_AWS_SECURUTY_CREDENTIALS);
         }
         logger.debug("Using default AWS credentials provider chain to load credentials");
         return defaultChainProvider;
@@ -211,8 +207,7 @@ public class DynamoDBSessionManager extends PersistentManagerBase {
         if (proxyHost != null || proxyPort != null) {
             logger.debug("Reading proxy settings from context.xml");
             if (proxyHost == null || proxyPort == null) {
-                throw new AmazonClientException("Incomplete proxy settings specified in context.xml."
-                        + " Both proxy hot and proxy port needs to be specified");
+                throw new AmazonClientException(Constants.INCOMPLETE_PROXY_SETTINGS_IN_CONTEXT);
             }
             logger.debug("Using proxy host and port from context.xml");
             clientConfiguration.withProxyHost(proxyHost).withProxyPort(proxyPort);
