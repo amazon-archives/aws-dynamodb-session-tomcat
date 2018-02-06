@@ -1,3 +1,9 @@
+**This project has been archived.**
+ 
+[https://github.com/magro/memcached-session-manager](https://github.com/magro/memcached-session-manager) is a viable alternative to this project and supports non-sticky
+sessions and realtime session persistence. It can be used with [Amazon Elasticache](https://aws.amazon.com/elasticache/).
+You may also fork this implementation and maintain your own version of the DynamoDB Session Manager.
+
 Amazon DynamoDB Session Manager for Apache Tomcat
 =================================================
 
