@@ -33,6 +33,7 @@ public class DynamoSessionStorage {
     public DynamoSessionStorage(DynamoDBMapper dynamoMapper, SessionConverter sessionConverter) {
         ValidatorUtils.nonNull(dynamoMapper, "DynamoDBMapper");
         ValidatorUtils.nonNull(sessionConverter, "SessionConverter");
+
         this.mapper = dynamoMapper;
         this.sessionConverter = sessionConverter;
     }
@@ -65,7 +66,6 @@ public class DynamoSessionStorage {
     }
 
     private class SessionConverterIterable implements Iterable<Session> {
-
         private final Iterable<DynamoSessionItem> sessionIterable;
 
         private SessionConverterIterable(Iterable<DynamoSessionItem> sessionIterable) {
@@ -87,7 +87,6 @@ public class DynamoSessionStorage {
                 return Collections.<T> emptyList().iterator();
             }
         }
-
     }
 
     /**
@@ -95,7 +94,6 @@ public class DynamoSessionStorage {
      * returning it
      */
     private class SessionConverterIterator implements Iterator<Session> {
-
         private final Iterator<DynamoSessionItem> sessionItemterator;
 
         private SessionConverterIterator(Iterator<DynamoSessionItem> sessionItemIterator) {
@@ -116,7 +114,5 @@ public class DynamoSessionStorage {
         public void remove() {
             sessionItemterator.remove();
         }
-
     }
-
 }

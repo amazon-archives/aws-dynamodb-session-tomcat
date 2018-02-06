@@ -39,7 +39,7 @@ public class DynamoDBSessionStoreIntegrationTest {
     public void loadCorruptSession_DeletesSessionWhenDeleteCorruptSessionsEnabled() throws
                                                                                     Exception {
         stubLoadCorruptSession();
-        final DynamoDBSessionStore sessionStore = new DynamoDBSessionStore(storage, true);
+        final DynamoDBSessionStore sessionStore = new DynamoDBSessionStore(storage, "tableName", true);
         assertNull(sessionStore.load(SESSION_ID));
         verify(storage, times(1)).deleteSession(SESSION_ID);
     }
@@ -48,7 +48,7 @@ public class DynamoDBSessionStoreIntegrationTest {
     public void loadCorruptSession_DoesNotDeletesSessionWhenDeleteCorruptSessionsDisabled() throws
                                                                                             Exception {
         stubLoadCorruptSession();
-        final DynamoDBSessionStore sessionStore = new DynamoDBSessionStore(storage, false);
+        final DynamoDBSessionStore sessionStore = new DynamoDBSessionStore(storage, "tableName", false);
         assertNull(sessionStore.load(SESSION_ID));
         verify(storage, never()).deleteSession(SESSION_ID);
     }

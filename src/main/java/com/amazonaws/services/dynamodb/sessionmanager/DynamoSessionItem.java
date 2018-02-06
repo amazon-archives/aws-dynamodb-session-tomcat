@@ -16,18 +16,21 @@ package com.amazonaws.services.dynamodb.sessionmanager;
 
 import java.nio.ByteBuffer;
 
+import com.amazonaws.services.dynamodb.sessionmanager.util.ConfigUtils;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
-@DynamoDBTable(tableName = DynamoDBSessionManager.DEFAULT_TABLE_NAME)
+@DynamoDBTable(tableName = ConfigUtils.DEFAULT_TABLE_NAME)
 public class DynamoSessionItem {
 
     public static final String SESSION_ID_ATTRIBUTE_NAME = "sessionId";
     public static final String SESSION_DATA_ATTRIBUTE_NAME = "sessionData";
+    public static final String TIME_TO_LIVE_ATTRIBUTE_NAME = "ttl";
 
     private String sessionId;
     private ByteBuffer sessionData;
+    private Long ttl;
 
     public DynamoSessionItem() {
     }
@@ -54,4 +57,10 @@ public class DynamoSessionItem {
         this.sessionData = sessionData;
     }
 
+    @DynamoDBAttribute(attributeName = TIME_TO_LIVE_ATTRIBUTE_NAME)
+    public Long getTtl() { return ttl; }
+
+    public void setTtl(Long ttl) {
+        this.ttl = ttl;
+    }
 }

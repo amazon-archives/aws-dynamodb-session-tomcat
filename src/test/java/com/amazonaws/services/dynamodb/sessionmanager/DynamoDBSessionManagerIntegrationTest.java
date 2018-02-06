@@ -15,6 +15,7 @@
 package com.amazonaws.services.dynamodb.sessionmanager;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.dynamodb.sessionmanager.util.ConfigUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
@@ -118,8 +119,9 @@ public class DynamoDBSessionManagerIntegrationTest extends AWSTestBase {
     public void sessionSwappedOutToDynamo_IsUnchangedWhenSwappedBackIn() throws Exception {
         final String attrValue = "SOME_VALUE";
 
+        ConfigUtils.addProperty(ConfigUtils.DELETE_CORRUPTED_SESSIONS, Boolean.TRUE.toString());
+
         TestDynamoDBSessionManager sessionManager = new TestDynamoDBSessionManager();
-        sessionManager.setDeleteCorruptSessions(true);
         // MaxIdleSwap needs to be set too as we want it completely out of memory before loading
         sessionManager.setMaxIdleBackup(MAX_IDLE_BACKUP_SECONDS);
         sessionManager.setMaxIdleSwap(MAX_IDLE_BACKUP_SECONDS);

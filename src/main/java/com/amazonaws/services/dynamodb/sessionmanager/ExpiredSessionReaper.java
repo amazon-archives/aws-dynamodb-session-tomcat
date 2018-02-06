@@ -14,16 +14,20 @@
  */
 package com.amazonaws.services.dynamodb.sessionmanager;
 
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.catalina.Session;
 
 import com.amazonaws.services.dynamodb.sessionmanager.util.ValidatorUtils;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 
 /**
  * Scans Session table and deletes any sessions that have expired
  */
 public class ExpiredSessionReaper implements Runnable {
+    private static final Log logger = LogFactory.getLog(ExpiredSessionReaper.class);
 
     private final DynamoSessionStorage sessionStorage;
 
@@ -37,12 +41,18 @@ public class ExpiredSessionReaper implements Runnable {
      */
     @Override
     public void run() {
+        long stt = System.currentTimeMillis();
+        logger.debug("Reaper started '" + new Date() + "'");
+
         Iterable<Session> sessions = sessionStorage.listSessions();
         for (Session session : sessions) {
             if (ExpiredSessionReaper.isExpired(session)) {
                 sessionStorage.deleteSession(session.getId());
+                logger.debug("Session '" + session.getId() + "' has been deleted.");
             }
         }
+
+        logger.debug("Reaper completed in '" + (System.currentTimeMillis() - stt) + "' ms.");
     }
 
     public static boolean isExpired(Session session) {
